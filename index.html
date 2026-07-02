@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>경매 물건 보기</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+         display: flex; min-height: 100vh; margin: 0; align-items: center; justify-content: center;
+         background: #f5f6f8; }
+  .card { background: #fff; border-radius: 16px; padding: 28px 22px; max-width: 420px; width: 88%;
+          box-shadow: 0 4px 20px rgba(0,0,0,.08); text-align: center; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #17212b; color: #eee; }
+    .card { background: #232e3c; }
+  }
+  h1 { font-size: 17px; margin: 0 0 6px; line-height: 1.45; word-break: keep-all; }
+  .case { color: #8a94a0; font-size: 14px; margin-bottom: 22px; }
+  a.btn { display: block; padding: 15px; border-radius: 12px; margin: 10px 0;
+          font-size: 16px; font-weight: 700; text-decoration: none; color: #fff; }
+  a.btn small { font-weight: 400; font-size: 13px; opacity: .85; }
+  .paid { background: #2563eb; }
+  .free { background: #10b981; }
+  .note { font-size: 12px; color: #99a2ad; margin-top: 14px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1 id="title">경매 물건</h1>
+  <div class="case" id="case"></div>
+  <a class="btn paid" id="btnPaid" style="display:none">🔑 옥션원에서 보기 <small>(유료회원)</small></a>
+  <a class="btn free" id="btnFree" style="display:none">🆓 무료로 보기 <small>(네이버 검색)</small></a>
+  <div class="note">서울 아파트 경매 알리미 · @SeoulAPTauction</div>
+</div>
+<script>
+  var q = new URLSearchParams(location.search);
+  var pid = q.get("pid"), cs = q.get("case"), t = q.get("t");
+  if (t) document.getElementById("title").textContent = t;
+  if (cs) document.getElementById("case").textContent = cs;
+  if (pid) {
+    var bp = document.getElementById("btnPaid");
+    bp.href = "https://www.auction1.co.kr/auction/ca_view.php?product_id=" + encodeURIComponent(pid);
+    bp.style.display = "block";
+  }
+  if (cs) {
+    var bf = document.getElementById("btnFree");
+    bf.href = "https://search.naver.com/search.naver?query=" + encodeURIComponent(cs);
+    bf.style.display = "block";
+  }
+  if (t) document.title = t + " | 보기 선택";
+</script>
+</body>
+</html>
