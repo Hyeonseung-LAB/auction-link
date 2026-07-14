@@ -215,14 +215,14 @@ function draw(){svg.setAttribute('viewBox',vb.x+' '+vb.y+' '+vb.w+' '+vb.h);repo
 function clampBox(o){o.w=Math.max(MINW,Math.min(maxW,o.w));o.h=o.w/AR;   // 크기 범위 + 중심을 서울 안에
   const cx=Math.max(0,Math.min(VW,o.x+o.w/2)),cy=Math.max(0,Math.min(VH,o.y+o.h/2));
   o.x=cx-o.w/2;o.y=cy-o.h/2;return o;}
-function contentBox(){const xs=P.map(p=>p.x),ys=P.map(p=>p.y);   // 전체 마커가 다 들어오는 서울비율 박스
-  let x0,x1,y0,y1;
-  if(xs.length){x0=Math.min.apply(null,xs);x1=Math.max.apply(null,xs);y0=Math.min.apply(null,ys);y1=Math.max.apply(null,ys);}
-  else{x0=0;x1=VW;y0=0;y1=VH;}
-  const cx=(x0+x1)/2,cy=(y0+y1)/2;
-  let w=(x1-x0)+((x1-x0)*0.12+60)*2,h=(y1-y0)+((y1-y0)*0.12+60)*2;
+function contentBox(){const xs=P.map(p=>p.x),ys=P.map(p=>p.y);   // 서울 중심 기준 대칭 박스(항상 가운데) + 전체 마커 포함
+  const ccx=VW/2,ccy=VH/2;
+  let hw=VW*0.42,hh=VH*0.42;   // 최소 반경(과확대 방지, 서울 대부분 보이게)
+  xs.forEach(x=>hw=Math.max(hw,Math.abs(x-ccx)));
+  ys.forEach(y=>hh=Math.max(hh,Math.abs(y-ccy)));
+  let w=(hw+50)*2,h=(hh+50)*2;
   if(w/h<AR)w=h*AR;else h=w/AR;
-  return{x:cx-w/2,y:cy-h/2,w:w,h:h};}
+  return{x:ccx-w/2,y:ccy-h/2,w:w,h:h};}
 function tick(){
   if(momentum){vb.x+=vx;vb.y+=vy;vx*=0.88;vy*=0.88;clampBox(vb);vt.x=vb.x;vt.y=vb.y;draw();
     if(Math.abs(vx)<0.15&&Math.abs(vy)<0.15){momentum=false;raf=0;return;}raf=requestAnimationFrame(tick);return;}
