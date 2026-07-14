@@ -1,4 +1,4 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>서울 아파트 경매 지도</title><style>
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"><title>서울 아파트 경매 지도</title><style>
 :root{color-scheme:light}
 *{box-sizing:border-box}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;background:#f2f4f8;color:#191f28}
@@ -254,6 +254,7 @@ svg.addEventListener('wheel',e=>{e.preventDefault();const[cx,cy]=relPos(e);
   const d=Math.max(-130,Math.min(130,e.deltaY));zoomTo(cx,cy,Math.exp(d*0.0018));},{passive:false});
 svg.addEventListener('dblclick',e=>{if(e.target.closest('.mk')||e.target.closest('.st')||e.target.closest('.hit'))return;
   e.preventDefault();const[cx,cy]=relPos(e);zoomTo(cx,cy,0.5);});
+['gesturestart','gesturechange','gestureend'].forEach(g=>svg.addEventListener(g,e=>e.preventDefault()));  // iOS 페이지핀치 차단→지도줌 활성
 let drag=false,dragged=false,last=null;
 const pts=new Map(); let pinchPrev=null;                 // 멀티터치(핀치) 추적
 function ptFrac(cx,cy){const r=svg.getBoundingClientRect();return[(cx-r.left)/r.width,(cy-r.top)/r.height];}
