@@ -98,23 +98,26 @@ select.fgu{border:1.5px solid #e3e8ef;border-radius:999px;padding:7px 13px;font-
   .page{max-width:100%;padding:0;margin:0}
   header,footer,.legend{display:none}
   .listview{display:none}
-  .mapview{display:block;padding:0;border-radius:0;box-shadow:none;background:#e9eef4;position:relative;height:100dvh;overflow:hidden}
-  .filterbar{position:absolute;top:0;left:0;right:0;z-index:20;flex-wrap:nowrap;overflow-x:auto;gap:7px;margin:0;
-    padding:12px 12px 20px;background:linear-gradient(#e9eef4ee,#e9eef400);-webkit-overflow-scrolling:touch}
+  .mapview{display:flex;flex-direction:column;padding:0;border-radius:0;box-shadow:none;background:#e9eef4;height:100dvh;overflow:hidden}
+  /* 상단 솔리드 필터 바(지도와 겹치지 않음) */
+  .filterbar{flex:0 0 auto;position:relative;z-index:20;flex-wrap:nowrap;overflow-x:auto;gap:7px;margin:0;
+    padding:10px 12px;background:#fff;box-shadow:0 1px 0 rgba(20,30,60,.07);-webkit-overflow-scrolling:touch}
   .filterbar::-webkit-scrollbar{display:none}
   .flabel,.fsep,.fcount{display:none}
-  .filterbar .chip,.filterbar select.fgu{flex:0 0 auto;padding:8px 14px;font-size:13px;box-shadow:0 2px 6px rgba(20,30,60,.12)}
-  .split{display:block;height:100%;gap:0}
-  .split .mapwrap{width:100%;height:58vh;flex:none}
-  .mapview svg{height:100%;touch-action:none}
-  .zoomctl{right:12px;bottom:calc(42vh + 14px);z-index:15}
+  .filterbar .chip,.filterbar select.fgu{flex:0 0 auto;padding:8px 14px;font-size:13px;white-space:nowrap}
+  /* 지도: 필터 아래 ~ 시트 위(가운데). 시트와 타일 배치(겹침 없음) */
+  .split{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;gap:0}
+  .split .mapwrap{flex:1 1 auto;min-height:0;width:100%;position:relative}
+  .mapview svg{width:100%;height:100%;touch-action:none;display:block}
+  .zoomctl{right:12px;bottom:14px;z-index:15}
   .zoomctl button{width:40px;height:40px;font-size:19px}
   #card{width:70vw;max-width:290px}
-  .pclist{position:absolute;left:0;right:0;bottom:0;z-index:30;flex:none;background:#fff;border-radius:20px 20px 0 0;
-    box-shadow:0 -6px 24px rgba(20,30,60,.16);height:42vh;max-height:none;overflow-y:auto;overscroll-behavior:contain;
-    padding:0 13px 20px;transition:height .28s cubic-bezier(.4,0,.2,1)}
-  .sheet-handle{display:flex;flex-direction:column;gap:8px;position:sticky;top:0;background:#fff;
-    padding:11px 0 9px;z-index:2;touch-action:none;cursor:grab}
+  /* 바텀시트(접기/반/전체) */
+  .pclist{flex:0 0 auto;height:40vh;background:#fff;border-radius:20px 20px 0 0;
+    box-shadow:0 -6px 22px rgba(20,30,60,.14);max-height:none;overflow-y:auto;overscroll-behavior:contain;
+    padding:0 13px 16px;transition:height .26s cubic-bezier(.4,0,.2,1)}
+  .sheet-handle{display:flex;flex-direction:column;gap:7px;position:sticky;top:0;background:#fff;
+    padding:9px 0 8px;z-index:2;touch-action:none;cursor:grab}
   .sheet-handle .bar{width:38px;height:5px;border-radius:3px;background:#dbe1e8;align-self:center}
   .sheet-handle .lbl{font-size:13.5px;font-weight:800;color:#191f28}
   .sheet-handle .lbl span{color:#8b95a1;font-weight:600}
@@ -409,18 +412,20 @@ const fsort=document.getElementById('fsort');
 if(fsort)fsort.addEventListener('change',()=>applySort(fsort.value));
 applySort('cheap');
 
-// ── 바텀시트 드래그(모바일): 손가락 따라오고 놓으면 스냅 ──
+// ── 바텀시트 드래그(모바일): 접기 0.12 / 반 0.44 / 전체 0.82, 놓으면 스냅 ──
 const _sh=document.querySelector('.sheet-handle');
-if(_sh){const PEEK=0.42, FULL=0.9; let sy=null,sh0=0,smoved=false;
-  const setFr=fr=>{pclist.style.height=(fr*100)+'vh';};
+if(_sh){const SNAP=[0.12,0.44,0.82]; let sy=null,sh0=0,smoved=false;
+  const setFr=fr=>{pclist.style.height=(fr*100)+'vh';
+    setTimeout(()=>{try{window.dispatchEvent(new Event('resize'));}catch(_){}},290);};   // 지도 영역 재정합
+  const nearest=fr=>SNAP.reduce((a,b)=>Math.abs(b-fr)<Math.abs(a-fr)?b:a);
   _sh.addEventListener('pointerdown',e=>{sy=e.clientY;sh0=pclist.getBoundingClientRect().height;smoved=false;
     pclist.style.transition='none';try{_sh.setPointerCapture(e.pointerId);}catch(_){}});
   _sh.addEventListener('pointermove',e=>{if(sy==null)return;const dy=sy-e.clientY;if(Math.abs(dy)>4)smoved=true;
-    const h=Math.max(innerHeight*0.14,Math.min(innerHeight*0.92,sh0+dy));pclist.style.height=h+'px';});
+    const h=Math.max(innerHeight*0.09,Math.min(innerHeight*0.86,sh0+dy));pclist.style.transition='none';pclist.style.height=h+'px';});
   _sh.addEventListener('pointerup',e=>{if(sy==null)return;const fr=pclist.getBoundingClientRect().height/innerHeight;sy=null;
     pclist.style.transition='';
-    if(!smoved){setFr(fr<0.6?FULL:PEEK);return;}                 // 탭: 토글
-    setFr(Math.abs(fr-PEEK)<Math.abs(fr-FULL)?PEEK:FULL);});     // 드래그: 가까운 쪽 스냅
+    if(!smoved){setFr(fr<0.28?0.44:0.12);return;}     // 탭: 접힘↔반 토글
+    setFr(nearest(fr));});                              // 드래그: 가장 가까운 스냅
 }
 }
 </script></body></html>
