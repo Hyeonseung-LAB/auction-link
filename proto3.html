@@ -215,12 +215,12 @@ function draw(){svg.setAttribute('viewBox',vb.x+' '+vb.y+' '+vb.w+' '+vb.h);repo
 function clampBox(o){o.w=Math.max(MINW,Math.min(maxW,o.w));o.h=o.w/AR;   // 크기 범위 + 중심을 서울 안에
   const cx=Math.max(0,Math.min(VW,o.x+o.w/2)),cy=Math.max(0,Math.min(VH,o.y+o.h/2));
   o.x=cx-o.w/2;o.y=cy-o.h/2;return o;}
-function contentBox(){const xs=P.map(p=>p.x),ys=P.map(p=>p.y);   // 서울 중심 기준 대칭 박스(항상 가운데) + 전체 마커 포함
+function contentBox(){const xs=P.map(p=>p.x),ys=P.map(p=>p.y);   // 서울 중심 대칭 박스: 전체+여백(가장자리 구도 잘 보이게)
   const ccx=VW/2,ccy=VH/2;
-  let hw=VW*0.42,hh=VH*0.42;   // 최소 반경(과확대 방지, 서울 대부분 보이게)
-  xs.forEach(x=>hw=Math.max(hw,Math.abs(x-ccx)));
-  ys.forEach(y=>hh=Math.max(hh,Math.abs(y-ccy)));
-  let w=(hw+50)*2,h=(hh+50)*2;
+  let hw=VW*0.56,hh=VH*0.56;   // 서울 전체가 여백 두고 다 들어오는 반경(강동/강서 등 가장자리 안 잘리게)
+  xs.forEach(x=>hw=Math.max(hw,Math.abs(x-ccx)+55));
+  ys.forEach(y=>hh=Math.max(hh,Math.abs(y-ccy)+55));
+  let w=hw*2,h=hh*2;
   if(w/h<AR)w=h*AR;else h=w/AR;
   return{x:ccx-w/2,y:ccy-h/2,w:w,h:h};}
 function tick(){
