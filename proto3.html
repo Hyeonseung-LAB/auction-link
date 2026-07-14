@@ -256,11 +256,13 @@ svg.addEventListener('dblclick',e=>{if(e.target.closest('.mk')||e.target.closest
   e.preventDefault();const[cx,cy]=relPos(e);zoomTo(cx,cy,0.5);});
 ['gesturestart','gesturechange','gestureend'].forEach(g=>svg.addEventListener(g,e=>e.preventDefault()));  // iOS 페이지핀치 차단→지도줌 활성
 let drag=false,dragged=false,last=null;
-const pts=new Map(); let pinchPrev=null;                 // 멀티터치(핀치) 추적
+const pts=new Map(); let pinchPrev=null;                 // (마우스/펜용) 포인터 경로
+let touchPan=false, tPrev=null, tlast=null;              // 터치 전용 팬/핀치 상태
 function ptFrac(cx,cy){const r=svg.getBoundingClientRect();return[(cx-r.left)/r.width,(cy-r.top)/r.height];}
 function pinchState(){const a=[...pts.values()];const dx=a[0].x-a[1].x,dy=a[0].y-a[1].y;
   return{d:Math.hypot(dx,dy)||1,mx:(a[0].x+a[1].x)/2,my:(a[0].y+a[1].y)/2};}
 svg.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='touch')return;   // 터치는 아래 touch 이벤트가 담당(삼성인터넷 등 멀티터치 안정)
   if(e.target.closest('.mk')||e.target.closest('.st')||e.target.closest('.hit'))return;
   momentum=false;if(raf){cancelAnimationFrame(raf);raf=0;}
   vt.x=vb.x;vt.y=vb.y;vt.w=vb.w;vt.h=vb.h;
@@ -268,7 +270,7 @@ svg.addEventListener('pointerdown',e=>{
   try{svg.setPointerCapture(e.pointerId);}catch(_){}
   if(pts.size===1){drag=true;dragged=false;last={x:e.clientX,y:e.clientY};vx=vy=0;svg.style.cursor='grabbing';}
   else{drag=false;pinchPrev=pinchState();}});
-svg.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;
+svg.addEventListener('pointermove',e=>{if(e.pointerType==='touch')return;if(!pts.has(e.pointerId))return;
   pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pts.size>=2){const c=pinchState();
     if(pinchPrev){const[cx,cy]=ptFrac(c.mx,c.my);pinchApply(cx,cy,pinchPrev.d/c.d);}
@@ -279,12 +281,36 @@ svg.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;
   const dwx=-mvx/r.width*vb.w,dwy=-mvy/r.height*vb.h;
   vb.x=Math.max(0,Math.min(VW-vb.w,vb.x+dwx));vb.y=Math.max(0,Math.min(VH-vb.h,vb.y+dwy));
   vt.x=vb.x;vt.y=vb.y;vx=dwx;vy=dwy;last={x:e.clientX,y:e.clientY};draw();});
-function endPt(e){if(!pts.has(e.pointerId))return;pts.delete(e.pointerId);
+function endPt(e){if(e.pointerType==='touch')return;if(!pts.has(e.pointerId))return;pts.delete(e.pointerId);
   if(pts.size===1){pinchPrev=null;const a=[...pts.values()][0];drag=true;last={x:a.x,y:a.y};vx=vy=0;}
   else if(pts.size===0){pinchPrev=null;if(drag){drag=false;svg.style.cursor='';
     vx=Math.max(-45,Math.min(45,vx));vy=Math.max(-45,Math.min(45,vy));
     if(Math.abs(vx)>0.6||Math.abs(vy)>0.6){momentum=true;animate();}}}}
 svg.addEventListener('pointerup',endPt);svg.addEventListener('pointercancel',endPt);
+// 터치 전용(모든 모바일 브라우저에서 멀티터치 안정): 1지=팬, 2지=핀치
+function tState(e){const a=e.touches[0],b=e.touches[1];const dx=a.clientX-b.clientX,dy=a.clientY-b.clientY;
+  return{d:Math.hypot(dx,dy)||1,mx:(a.clientX+b.clientX)/2,my:(a.clientY+b.clientY)/2};}
+svg.addEventListener('touchstart',e=>{
+  if(e.target.closest('.mk')||e.target.closest('.st')||e.target.closest('.hit'))return;
+  momentum=false;if(raf){cancelAnimationFrame(raf);raf=0;}vt.x=vb.x;vt.y=vb.y;vt.w=vb.w;vt.h=vb.h;
+  if(e.touches.length===1){touchPan=true;dragged=false;tlast={x:e.touches[0].clientX,y:e.touches[0].clientY};vx=vy=0;}
+  else if(e.touches.length>=2){touchPan=false;tPrev=tState(e);}},{passive:false});
+svg.addEventListener('touchmove',e=>{
+  if(e.touches.length>=2){e.preventDefault();const t=tState(e);
+    if(tPrev){const[cx,cy]=ptFrac(t.mx,t.my);pinchApply(cx,cy,tPrev.d/t.d);}tPrev=t;dragged=true;return;}
+  if(!touchPan)return;e.preventDefault();const r=svg.getBoundingClientRect();
+  const mvx=e.touches[0].clientX-tlast.x,mvy=e.touches[0].clientY-tlast.y;
+  if(Math.abs(mvx)+Math.abs(mvy)>2)dragged=true;
+  const dwx=-mvx/r.width*vb.w,dwy=-mvy/r.height*vb.h;
+  vb.x=Math.max(0,Math.min(VW-vb.w,vb.x+dwx));vb.y=Math.max(0,Math.min(VH-vb.h,vb.y+dwy));
+  vt.x=vb.x;vt.y=vb.y;vx=dwx;vy=dwy;tlast={x:e.touches[0].clientX,y:e.touches[0].clientY};draw();},{passive:false});
+function tEnd(e){
+  if(e.touches.length===0){tPrev=null;
+    if(touchPan){touchPan=false;vx=Math.max(-45,Math.min(45,vx));vy=Math.max(-45,Math.min(45,vy));
+      if(Math.abs(vx)>0.6||Math.abs(vy)>0.6){momentum=true;animate();}}}
+  else if(e.touches.length===1){tPrev=null;touchPan=true;dragged=true;
+    tlast={x:e.touches[0].clientX,y:e.touches[0].clientY};vx=vy=0;}}
+svg.addEventListener('touchend',tEnd);svg.addEventListener('touchcancel',tEnd);
 function fitTo(anim){const r=fitRegion();
   if(anim){vt.x=r.x;vt.y=r.y;vt.w=r.w;vt.h=r.h;clampT();animate();}
   else{vb.x=vt.x=r.x;vb.y=vt.y=r.y;vb.w=vt.w=r.w;vb.h=vt.h=r.h;draw();}}
