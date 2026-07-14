@@ -196,64 +196,54 @@ const lineName=r=>/^\d+$/.test(r)?r+'호선':r+'선';
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const mk={}; svg.querySelectorAll('.mk').forEach(el=>mk[el.dataset.i]=el);
 
-// ── 확대/축소/이동 (부드러운 애니메이션 viewBox: vb=표시 → vt=목표로 수렴) ──
-const vb={x:0,y:0,w:VW,h:VH}, vt={x:0,y:0,w:VW,h:VH};
-let raf=0, vx=0, vy=0, momentum=false, ASP=VW/VH, fullW=VW, fullH=VH, MINW=VW/8;
-function syncAspect(){const r=svg.getBoundingClientRect();if(!r.width||!r.height)return;
-  ASP=r.width/r.height;                       // 뷰박스 비율을 실제 컨테이너 비율에 맞춤(레터박스·좌표오차 제거)
-  if(VW/VH>ASP){fullH=VH;fullW=VH*ASP;}else{fullW=VW;fullH=VW/ASP;}
-  MINW=fullW/8;}
-function fitRegion(){                          // 마커들이 딱 들어오는(컨테이너 비율) 뷰박스
-  syncAspect();const xs=P.map(p=>p.x),ys=P.map(p=>p.y);
-  if(!xs.length)return{x:(VW-fullW)/2,y:(VH-fullH)/2,w:fullW,h:fullH};
-  let x0=Math.min.apply(null,xs),x1=Math.max.apply(null,xs),y0=Math.min.apply(null,ys),y1=Math.max.apply(null,ys);
-  const px=(x1-x0)*0.14+40,py=(y1-y0)*0.14+40;x0-=px;x1+=px;y0-=py;y1+=py;
-  let w=x1-x0,h=y1-y0;
-  if(w/h<ASP){const nw=h*ASP;x0-=(nw-w)/2;w=nw;}else{const nh=w/ASP;y0-=(nh-h)/2;h=nh;}
-  if(w>fullW){w=fullW;h=fullH;x0=(VW-w)/2;y0=(VH-h)/2;}
-  x0=Math.max(0,Math.min(VW-w,x0));y0=Math.max(0,Math.min(VH-h,y0));
-  return{x:x0,y:y0,w:w,h:h};}
-function toScreen(px,py){const r=svg.getBoundingClientRect();
-  return [(px-vb.x)/vb.w*r.width,(py-vb.y)/vb.h*r.height];}
+// ── 확대/축소/이동 (레터박스 인식: viewBox는 서울 비율 고정, meet 변환으로 화면좌표 계산) ──
+const vb={x:0,y:0,w:VW,h:VH}, vt={x:0,y:0,w:VW,h:VH}, AR=VW/VH;
+let raf=0, vx=0, vy=0, momentum=false, MINW=VW/8, maxW=VW;
+function mapT(){const r=svg.getBoundingClientRect();
+  const s=Math.min(r.width/vb.w,r.height/vb.h)||1;         // meet 스케일(px/world)
+  return{s:s,ox:(r.width-vb.w*s)/2,oy:(r.height-vb.h*s)/2,rw:r.width,rh:r.height};}
+function toScreen(px,py){const t=mapT();return[t.ox+(px-vb.x)*t.s,t.oy+(py-vb.y)*t.s];}
 function repositionOpen(){const r=svg.getBoundingClientRect();
-  if(card.style.display==='block'&&curI!=null){const p=P[curI];
-    let lx=(p.x-vb.x)/vb.w*r.width;lx=Math.max(120,Math.min(r.width-120,lx));
-    card.style.left=lx+'px';card.style.top=((p.y-vb.y)/vb.h*r.height)+'px';}
-  if(stname.style.display==='block'&&selSt){
-    stname.style.left=((+selSt.dataset.x-vb.x)/vb.w*r.width)+'px';
-    stname.style.top=((+selSt.dataset.y-vb.y)/vb.h*r.height)+'px';}}
+  if(card.style.display==='block'&&curI!=null){const p=P[curI],a=toScreen(p.x,p.y);
+    card.style.left=Math.max(120,Math.min(r.width-120,a[0]))+'px';card.style.top=a[1]+'px';}
+  if(stname.style.display==='block'&&selSt){const a=toScreen(+selSt.dataset.x,+selSt.dataset.y);
+    stname.style.left=a[0]+'px';stname.style.top=a[1]+'px';}}
 function draw(){svg.setAttribute('viewBox',vb.x+' '+vb.y+' '+vb.w+' '+vb.h);repositionOpen();}
-function clampT(){vt.w=Math.min(vt.w,fullW);vt.h=vt.w/ASP;
-  vt.x=Math.max(0,Math.min(VW-vt.w,vt.x));vt.y=Math.max(0,Math.min(VH-vt.h,vt.y));}
+function clampBox(o){o.w=Math.max(MINW,Math.min(maxW,o.w));o.h=o.w/AR;   // 크기 범위 + 중심을 서울 안에
+  const cx=Math.max(0,Math.min(VW,o.x+o.w/2)),cy=Math.max(0,Math.min(VH,o.y+o.h/2));
+  o.x=cx-o.w/2;o.y=cy-o.h/2;return o;}
+function contentBox(){const xs=P.map(p=>p.x),ys=P.map(p=>p.y);   // 전체 마커가 다 들어오는 서울비율 박스
+  let x0,x1,y0,y1;
+  if(xs.length){x0=Math.min.apply(null,xs);x1=Math.max.apply(null,xs);y0=Math.min.apply(null,ys);y1=Math.max.apply(null,ys);}
+  else{x0=0;x1=VW;y0=0;y1=VH;}
+  const cx=(x0+x1)/2,cy=(y0+y1)/2;
+  let w=(x1-x0)+((x1-x0)*0.12+60)*2,h=(y1-y0)+((y1-y0)*0.12+60)*2;
+  if(w/h<AR)w=h*AR;else h=w/AR;
+  return{x:cx-w/2,y:cy-h/2,w:w,h:h};}
 function tick(){
-  if(momentum){                                     // 관성 팬: vb를 직접 감속 이동
-    vb.x+=vx;vb.y+=vy;vx*=0.88;vy*=0.88;
-    const bx=vb.x,by=vb.y;
-    vb.x=Math.max(0,Math.min(VW-vb.w,vb.x));vb.y=Math.max(0,Math.min(VH-vb.h,vb.y));
-    if(vb.x!==bx)vx=0; if(vb.y!==by)vy=0; vt.x=vb.x;vt.y=vb.y; draw();
-    if(Math.abs(vx)<0.15&&Math.abs(vy)<0.15){momentum=false;raf=0;return;}
-    raf=requestAnimationFrame(tick);return;}
-  const k=0.2;                                       // 줌/이동: 목표로 지수 수렴
-  vb.x+=(vt.x-vb.x)*k;vb.y+=(vt.y-vb.y)*k;vb.w+=(vt.w-vb.w)*k;vb.h+=(vt.h-vb.h)*k;
-  draw();
+  if(momentum){vb.x+=vx;vb.y+=vy;vx*=0.88;vy*=0.88;clampBox(vb);vt.x=vb.x;vt.y=vb.y;draw();
+    if(Math.abs(vx)<0.15&&Math.abs(vy)<0.15){momentum=false;raf=0;return;}raf=requestAnimationFrame(tick);return;}
+  const k=0.2;
+  vb.x+=(vt.x-vb.x)*k;vb.y+=(vt.y-vb.y)*k;vb.w+=(vt.w-vb.w)*k;vb.h+=(vt.h-vb.h)*k;draw();
   if(Math.abs(vb.x-vt.x)+Math.abs(vb.y-vt.y)+Math.abs(vb.w-vt.w)+Math.abs(vb.h-vt.h)<0.4){
     vb.x=vt.x;vb.y=vt.y;vb.w=vt.w;vb.h=vt.h;draw();raf=0;return;}
   raf=requestAnimationFrame(tick);}
 function animate(){if(!raf)raf=requestAnimationFrame(tick);}
-function zoomTo(cx,cy,f){const wx=vb.x+cx*vb.w,wy=vb.y+cy*vb.h;   // 커서 지점 기준 확대
-  let nw=Math.max(MINW,Math.min(fullW,vt.w*f)),nh=nw/ASP;
-  vt.w=nw;vt.h=nh;vt.x=wx-cx*nw;vt.y=wy-cy*nh;clampT();animate();}
-function pinchApply(cx,cy,f){const wx=vb.x+cx*vb.w,wy=vb.y+cy*vb.h;   // 핀치: 즉시 반영(관성X)
-  let nw=Math.max(MINW,Math.min(fullW,vb.w*f)),nh=nw/ASP;
-  vb.w=nw;vb.h=nh;vb.x=Math.max(0,Math.min(VW-nw,wx-cx*nw));vb.y=Math.max(0,Math.min(VH-nh,wy-cy*nh));
-  vt.x=vb.x;vt.y=vb.y;vt.w=vb.w;vt.h=vb.h;draw();}
-function relPos(e){const r=svg.getBoundingClientRect();
-  let cx=(e.clientX-r.left)/r.width,cy=(e.clientY-r.top)/r.height;
-  return[isFinite(cx)?cx:.5,isFinite(cy)?cy:.5];}
-svg.addEventListener('wheel',e=>{e.preventDefault();const[cx,cy]=relPos(e);
-  const d=Math.max(-130,Math.min(130,e.deltaY));zoomTo(cx,cy,Math.exp(d*0.0018));},{passive:false});
+function zoomAt(sx,sy,f,anim){const t=mapT();                    // sx,sy=화면좌표(rect기준), f=크기 배율
+  const wx=vb.x+(sx-t.ox)/t.s,wy=vb.y+(sy-t.oy)/t.s;            // 손가락 아래 월드좌표
+  let nw=Math.max(MINW,Math.min(maxW,(anim?vt.w:vb.w)*f)),nh=nw/AR;
+  const ns=Math.min(t.rw/nw,t.rh/nh)||1,nox=(t.rw-nw*ns)/2,noy=(t.rh-nh*ns)/2;
+  const o=clampBox({x:wx-(sx-nox)/ns,y:wy-(sy-noy)/ns,w:nw,h:nh});
+  if(anim){vt.x=o.x;vt.y=o.y;vt.w=o.w;vt.h=o.h;animate();}
+  else{vb.x=vt.x=o.x;vb.y=vt.y=o.y;vb.w=vt.w=o.w;vb.h=vt.h=o.h;draw();}}
+function fitAll(anim){const o=clampBox(contentBox());
+  if(anim){vt.x=o.x;vt.y=o.y;vt.w=o.w;vt.h=o.h;animate();}
+  else{vb.x=vt.x=o.x;vb.y=vt.y=o.y;vb.w=vt.w=o.w;vb.h=vt.h=o.h;draw();}}
+function relXY(e){const r=svg.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top];}
+svg.addEventListener('wheel',e=>{e.preventDefault();const[sx,sy]=relXY(e);
+  const d=Math.max(-130,Math.min(130,e.deltaY));zoomAt(sx,sy,Math.exp(d*0.0018),true);},{passive:false});
 svg.addEventListener('dblclick',e=>{if(e.target.closest('.mk')||e.target.closest('.st')||e.target.closest('.hit'))return;
-  e.preventDefault();const[cx,cy]=relPos(e);zoomTo(cx,cy,0.5);});
+  e.preventDefault();const[sx,sy]=relXY(e);zoomAt(sx,sy,0.5,true);});
 ['gesturestart','gesturechange','gestureend'].forEach(g=>svg.addEventListener(g,e=>e.preventDefault()));  // iOS 페이지핀치 차단→지도줌 활성
 let drag=false,dragged=false,last=null;
 const pts=new Map(); let pinchPrev=null;                 // (마우스/펜용) 포인터 경로
@@ -270,17 +260,12 @@ svg.addEventListener('pointerdown',e=>{
   try{svg.setPointerCapture(e.pointerId);}catch(_){}
   if(pts.size===1){drag=true;dragged=false;last={x:e.clientX,y:e.clientY};vx=vy=0;svg.style.cursor='grabbing';}
   else{drag=false;pinchPrev=pinchState();}});
-svg.addEventListener('pointermove',e=>{if(e.pointerType==='touch')return;if(!pts.has(e.pointerId))return;
+svg.addEventListener('pointermove',e=>{if(e.pointerType==='touch')return;if(!drag||!pts.has(e.pointerId))return;
   pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  if(pts.size>=2){const c=pinchState();
-    if(pinchPrev){const[cx,cy]=ptFrac(c.mx,c.my);pinchApply(cx,cy,pinchPrev.d/c.d);}
-    pinchPrev=c;dragged=true;return;}
-  if(!drag)return;const r=svg.getBoundingClientRect();
-  const mvx=e.clientX-last.x,mvy=e.clientY-last.y;
+  const s=mapT().s,mvx=e.clientX-last.x,mvy=e.clientY-last.y;
   if(Math.abs(mvx)+Math.abs(mvy)>2)dragged=true;
-  const dwx=-mvx/r.width*vb.w,dwy=-mvy/r.height*vb.h;
-  vb.x=Math.max(0,Math.min(VW-vb.w,vb.x+dwx));vb.y=Math.max(0,Math.min(VH-vb.h,vb.y+dwy));
-  vt.x=vb.x;vt.y=vb.y;vx=dwx;vy=dwy;last={x:e.clientX,y:e.clientY};draw();});
+  const dwx=-mvx/s,dwy=-mvy/s;
+  vb.x+=dwx;vb.y+=dwy;clampBox(vb);vt.x=vb.x;vt.y=vb.y;vx=dwx;vy=dwy;last={x:e.clientX,y:e.clientY};draw();});
 function endPt(e){if(e.pointerType==='touch')return;if(!pts.has(e.pointerId))return;pts.delete(e.pointerId);
   if(pts.size===1){pinchPrev=null;const a=[...pts.values()][0];drag=true;last={x:a.x,y:a.y};vx=vy=0;}
   else if(pts.size===0){pinchPrev=null;if(drag){drag=false;svg.style.cursor='';
@@ -296,14 +281,13 @@ svg.addEventListener('touchstart',e=>{
   if(e.touches.length===1){touchPan=true;dragged=false;tlast={x:e.touches[0].clientX,y:e.touches[0].clientY};vx=vy=0;}
   else if(e.touches.length>=2){touchPan=false;tPrev=tState(e);}},{passive:false});
 svg.addEventListener('touchmove',e=>{
-  if(e.touches.length>=2){e.preventDefault();const t=tState(e);
-    if(tPrev){const[cx,cy]=ptFrac(t.mx,t.my);pinchApply(cx,cy,tPrev.d/t.d);}tPrev=t;dragged=true;return;}
-  if(!touchPan)return;e.preventDefault();const r=svg.getBoundingClientRect();
-  const mvx=e.touches[0].clientX-tlast.x,mvy=e.touches[0].clientY-tlast.y;
+  if(e.touches.length>=2){e.preventDefault();const t=tState(e),r=svg.getBoundingClientRect();
+    if(tPrev)zoomAt(t.mx-r.left,t.my-r.top,tPrev.d/t.d,false);tPrev=t;dragged=true;return;}
+  if(!touchPan)return;e.preventDefault();
+  const s=mapT().s,mvx=e.touches[0].clientX-tlast.x,mvy=e.touches[0].clientY-tlast.y;
   if(Math.abs(mvx)+Math.abs(mvy)>2)dragged=true;
-  const dwx=-mvx/r.width*vb.w,dwy=-mvy/r.height*vb.h;
-  vb.x=Math.max(0,Math.min(VW-vb.w,vb.x+dwx));vb.y=Math.max(0,Math.min(VH-vb.h,vb.y+dwy));
-  vt.x=vb.x;vt.y=vb.y;vx=dwx;vy=dwy;tlast={x:e.touches[0].clientX,y:e.touches[0].clientY};draw();},{passive:false});
+  const dwx=-mvx/s,dwy=-mvy/s;
+  vb.x+=dwx;vb.y+=dwy;clampBox(vb);vt.x=vb.x;vt.y=vb.y;vx=dwx;vy=dwy;tlast={x:e.touches[0].clientX,y:e.touches[0].clientY};draw();},{passive:false});
 function tEnd(e){
   if(e.touches.length===0){tPrev=null;
     if(touchPan){touchPan=false;vx=Math.max(-45,Math.min(45,vx));vy=Math.max(-45,Math.min(45,vy));
@@ -311,24 +295,20 @@ function tEnd(e){
   else if(e.touches.length===1){tPrev=null;touchPan=true;dragged=true;
     tlast={x:e.touches[0].clientX,y:e.touches[0].clientY};vx=vy=0;}}
 svg.addEventListener('touchend',tEnd);svg.addEventListener('touchcancel',tEnd);
-function fitTo(anim){const r=fitRegion();
-  if(anim){vt.x=r.x;vt.y=r.y;vt.w=r.w;vt.h=r.h;clampT();animate();}
-  else{vb.x=vt.x=r.x;vb.y=vt.y=r.y;vb.w=vt.w=r.w;vb.h=vt.h=r.h;draw();}}
 const _zi=document.getElementById('zin'),_zo=document.getElementById('zout'),_zr=document.getElementById('zreset');
-if(_zi)_zi.addEventListener('click',e=>{e.stopPropagation();zoomTo(.5,.5,0.6);});
-if(_zo)_zo.addEventListener('click',e=>{e.stopPropagation();zoomTo(.5,.5,1/0.6);});
-if(_zr)_zr.addEventListener('click',e=>{e.stopPropagation();fitTo(true);});
-function reframe(){                                  // 비율 변화(회전·URL바·PC↔모바일)에 뷰박스 재정합(크기 클램프 포함)
-  syncAspect();
-  const cx=vb.x+vb.w/2, cy=vb.y+vb.h/2, frac=Math.min(1,vb.w/fullW);
-  let w=Math.max(MINW,Math.min(fullW,fullW*frac)), h=w/ASP;
-  vb.w=vt.w=w;vb.h=vt.h=h;
-  vb.x=vt.x=Math.max(0,Math.min(VW-w,cx-w/2));
-  vb.y=vt.y=Math.max(0,Math.min(VH-h,cy-h/2));draw();}
-window.addEventListener('resize',reframe);
-window.addEventListener('orientationchange',()=>setTimeout(reframe,60));
-let _inited=false;                                  // 실제 컨테이너 비율로 판정(모바일 세로화면만 마커맞춤)
-function initView(){syncAspect();if(!_inited&&Math.abs(ASP-VW/VH)>0.05){fitTo(false);_inited=true;}}
+function btnZoom(f){const r=svg.getBoundingClientRect();zoomAt(r.width/2,r.height/2,f,true);}
+if(_zi)_zi.addEventListener('click',e=>{e.stopPropagation();btnZoom(0.6);});
+if(_zo)_zo.addEventListener('click',e=>{e.stopPropagation();btnZoom(1/0.6);});
+if(_zr)_zr.addEventListener('click',e=>{e.stopPropagation();fitAll(true);});
+let _inited=false;
+function initView(){if(_inited)return;const r=svg.getBoundingClientRect();if(!r.width||!r.height)return;
+  _inited=true;
+  if(innerWidth<760){maxW=Math.max(contentBox().w,VW*0.5);fitAll(false);}  // 모바일: 전체 마커가 화면에 딱
+  else{maxW=VW;draw();}}                                                    // PC: 서울 전체(기존 그대로)
+function onResize(){if(!_inited){initView();return;}
+  clampBox(vb);vt.x=vb.x;vt.y=vb.y;vt.w=vb.w;vt.h=vb.h;draw();}            // 레터박스는 meet가 자동 재적합, 재클램프만
+window.addEventListener('resize',onResize);
+window.addEventListener('orientationchange',()=>setTimeout(onResize,60));
 initView();requestAnimationFrame(initView);window.addEventListener('load',initView);
 
 // ── 지하철 노선/역 하이라이트 ──
