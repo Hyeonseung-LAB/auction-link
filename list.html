@@ -325,6 +325,9 @@ select.fgu{border:1.5px solid #e3e8ef;border-radius:999px;padding:7px 13px;font-
    DOM 은 그대로(applyF·applySort·renumber·focus 가 cardEl 구조에 묶여 있다) — CSS 그리드로
    같은 요소를 열에 배치할 뿐이다. 이 블록 밖(모바일)은 픽셀 하나 안 바뀐다. */
 @media(min-width:1100px){
+  /* 카드 보기: 지도·목록 반반. 세로 기준 비율(1000/840)로 두면 1440 화면에서 지도가 820px 을 먹고
+     카드는 한 줄 490px 뿐이었다(사장님 2026-09-29 "지도가 가로를 너무 잡아먹는다"). 줄 보기는 아래 --mapw 토글. */
+  .split .mapwrap{aspect-ratio:auto;flex:0 0 calc(50% - 8px);min-width:300px}
   body.rows .split .mapwrap{aspect-ratio:auto;flex:0 0 var(--mapw,40%);min-width:300px}
   body.rows .pclist{display:block}
   body.rows .pclist .pc-card{display:grid;grid-template-columns:46px minmax(160px,1fr) 150px 150px 150px;
