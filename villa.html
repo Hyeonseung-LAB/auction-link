@@ -86,6 +86,9 @@ footer{color:#9aa0a8;font-size:12px;text-align:center;padding:20px 0 12px;line-h
 .vm{cursor:pointer}
 .vm circle{stroke:#fff;stroke-width:1.5;vector-effect:non-scaling-stroke}
 .vm.hot circle{stroke:#191f28;stroke-width:2.5}
+/* 위험·지분은 흐리게·작게 — 👑 물건의 80% 가 위험(인수 보증금)이라 빨간 점이 지도를 덮었다. 목록처럼 뒤로 뺀다 */
+.vm.dim circle{fill-opacity:.3;stroke-opacity:.5}
+.vm.dim.hot circle{fill-opacity:1;stroke-opacity:1}
 .vmz{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:6px}
 .vmz button{width:32px;height:32px;border-radius:9px;border:1.5px solid #e3e8ef;background:#fff;font:inherit;font-size:16px;font-weight:700;color:#4e5968;cursor:pointer}
 .vmn{position:absolute;left:10px;top:10px;background:rgba(255,255,255,.92);border-radius:8px;padding:4px 9px;font-size:11.5px;color:#6b7684;font-weight:600}
@@ -386,7 +389,7 @@ draw();
   function apply(){
     svg.setAttribute('viewBox',vb.x+' '+vb.y+' '+vb.w+' '+vb.h);
     var k=scale();   // 확대해도 점·글자 크기는 화면 기준으로 그대로
-    mk.querySelectorAll('circle').forEach(function(c){c.setAttribute('r',5.5*k);});
+    mk.querySelectorAll('circle').forEach(function(c){c.setAttribute('r',(c.parentNode.classList.contains('dim')?4:5.5)*k);});
     svg.querySelectorAll('.vst').forEach(function(c){c.setAttribute('r',2.2*k);});
     svg.querySelectorAll('.vlbl').forEach(function(t){t.setAttribute('font-size',11*k);});
   }
@@ -410,16 +413,19 @@ draw();
   function fit(list){
     var xs=[],ys=[]; list.forEach(function(p){if(p.xy){xs.push(p.xy[0]);ys.push(p.xy[1]);}});
     if(!xs.length){vb={x:B[0],y:B[1],w:B[2],h:B[3]};apply();return;}
-    // 멀리 떨어진 한두 점(인천 목록 속 서울 1건 등) 때문에 전체가 쪼그라들지 않게 가운데 90%에 맞춘다.
-    // 떨어진 점은 지도에 그대로 있다 — ⤢ 나 축소로 보인다.
-    xs.sort(function(a,b){return a-b;}); ys.sort(function(a,b){return a-b;});
-    var q=function(a,f){return a[Math.min(a.length-1,Math.max(0,Math.round((a.length-1)*f)))];};
-    var lo=xs.length>=10?0.05:0, hi=xs.length>=10?0.95:1;
-    var x0=q(xs,lo),x1=q(xs,hi),y0=q(ys,lo),y1=q(ys,hi);
-    var w=Math.max(x1-x0,B[2]/10), h=Math.max(y1-y0,B[3]/10), cx=(x0+x1)/2, cy=(y0+y1)/2;
-    var r=svg.getBoundingClientRect(), asp=r.width&&r.height?r.width/r.height:B[2]/B[3];
-    w*=1.25; h*=1.25; if(w/h<asp)w=h*asp; else h=w/asp;
-    vb={x:cx-w/2,y:cy-h/2,w:w,h:h}; apply();
+    // 점 전부가 들어오게 맞춘다. 예전엔 가로·세로 각각 가운데 90%만 맞췄더니 인천 244·서울 25 처럼
+    // 한쪽이 몰리면 인천 덩어리 양끝과 서울 대부분이 잘려 '이상한 기본 화면'이 됐다(사장님 2026-09-29).
+    // 좌표는 서울·인천 상자 안으로만 찍히므로(villamap.xy) 멀리 튄 점이 전체를 쪼그라뜨릴 일은 없다.
+    var x0=Math.min.apply(null,xs), x1=Math.max.apply(null,xs), y0=Math.min.apply(null,ys), y1=Math.max.apply(null,ys);
+    var pw=Math.max(x1-x0,B[2]/10)*1.15, ph=Math.max(y1-y0,B[3]/10)*1.15, cx=(x0+x1)/2, cy=(y0+y1)/2;
+    // PC 지도는 화면 높이만큼 길고 페이지 위쪽 설명 아래서 시작해, 처음엔 아랫부분이 화면 밖이다.
+    // 그래서 '지금 보이는 띠'(지도 ∩ 화면)에 점을 맞춘다. 내려 보면 지도가 붙으면서 아래가 더 드러날 뿐.
+    var r=svg.getBoundingClientRect();
+    if(!r.width||!r.height){var a=B[2]/B[3]; if(pw/ph<a)pw=ph*a; else ph=pw/a; vb={x:cx-pw/2,y:cy-ph/2,w:pw,h:ph}; apply(); return;}
+    var top=Math.max(r.top,0), bot=Math.min(r.bottom,window.innerHeight||r.bottom);
+    var visH=bot-top>80?bot-top:r.height, band=(bot-top>80?top-r.top:0)+visH/2;
+    var k=Math.max(pw/r.width,ph/visH);           // 지도 단위 / 화면 px
+    vb={x:cx-r.width*k/2,y:cy-band*k,w:r.width*k,h:r.height*k}; apply();
   }
   var cur=[], first=true;
   window.vmDraw=function(v){
@@ -430,7 +436,8 @@ draw();
     mk.innerHTML=cur.map(function(p){
       var t=esc(p.title||'')+(p.nb&&p.nb.n?' · 급매 '+esc(p.nb.p25)+' ~ 시세 '+esc(p.nb.med):'')
         +(p.min_amt?' · 최저 '+esc(p.min_amt):'');
-      return '<g class="vm" data-i="'+p._i+'"><circle cx="'+p.xy[0]+'" cy="'+p.xy[1]+'" r="5" fill="'+p.gcolor+'"><title>'+t+'</title></circle></g>';
+      var dim=(p.grade==='위험'||p.grade==='지분');
+      return '<g class="vm'+(dim?' dim':'')+'" data-i="'+p._i+'"><circle cx="'+p.xy[0]+'" cy="'+p.xy[1]+'" r="5" fill="'+p.gcolor+'"><title>'+t+'</title></circle></g>';
     }).join('');
     if(note)note.textContent='지도 '+cur.length+'건'+(v.length>cur.length?' (위치 못 찾음 '+(v.length-cur.length)+')':'');
     if(first&&wrap.offsetParent){first=false; fit(cur);} else apply();
