@@ -89,6 +89,16 @@ footer{color:#9aa0a8;font-size:12px;text-align:center;padding:20px 0 12px;line-h
 /* 위험·지분은 흐리게·작게 — 👑 물건의 80% 가 위험(인수 보증금)이라 빨간 점이 지도를 덮었다. 목록처럼 뒤로 뺀다 */
 .vm.dim circle{fill-opacity:.3;stroke-opacity:.5}
 .vm.dim.hot circle{fill-opacity:1;stroke-opacity:1}
+/* 점 hover: 링(점 위에 크게) + 요약 풍선 + 목록 카드 테두리 */
+.vring{stroke:#191f28;stroke-width:2.5;vector-effect:non-scaling-stroke;pointer-events:none}
+.vtip{display:none;position:absolute;z-index:6;pointer-events:none;max-width:280px;background:#fff;border-radius:10px;
+  padding:8px 11px;box-shadow:0 4px 16px rgba(20,30,60,.2);font-size:12px;line-height:1.55;color:#333d4b}
+.vtip .vt1{font-weight:800;color:#191f28;font-size:12.5px}
+.vtip .vg{display:inline-block;color:#fff;font-weight:800;font-size:10.5px;border-radius:5px;padding:0 5px;margin-right:2px}
+.vtip .vt3 b{color:#191f28}
+.vtip .vt4{color:#8b95a1;font-size:11px;margin-top:2px}
+.card.hv{box-shadow:0 0 0 2px #3182f6,0 4px 14px rgba(20,30,60,.14)}
+.vm{cursor:pointer}
 .vmz{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:6px}
 .vmz button{width:32px;height:32px;border-radius:9px;border:1.5px solid #e3e8ef;background:#fff;font:inherit;font-size:16px;font-weight:700;color:#4e5968;cursor:pointer}
 .vmn{position:absolute;left:10px;top:10px;background:rgba(255,255,255,.92);border-radius:8px;padding:4px 9px;font-size:11.5px;color:#6b7684;font-weight:600}
@@ -385,6 +395,10 @@ draw();
   var mk=document.getElementById('vmk'), wrap=svg.parentNode, note=document.getElementById('vmn');
   var B=svg.getAttribute('data-box').split(',').map(Number);
   var vb={x:B[0],y:B[1],w:B[2],h:B[3]};
+  var byI={}, hovI=null, drag=null;
+  var ring=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  ring.setAttribute('class','vring'); ring.style.display='none'; svg.appendChild(ring);   // mk 뒤 = 모든 점 위
+  var tip=document.createElement('div'); tip.className='vtip'; wrap.appendChild(tip);
   function scale(){var r=svg.getBoundingClientRect(); return r.width?Math.max(vb.w/r.width,vb.h/r.height):1;}
   function apply(){
     svg.setAttribute('viewBox',vb.x+' '+vb.y+' '+vb.w+' '+vb.h);
@@ -392,6 +406,7 @@ draw();
     mk.querySelectorAll('circle').forEach(function(c){c.setAttribute('r',(c.parentNode.classList.contains('dim')?4:5.5)*k);});
     svg.querySelectorAll('.vst').forEach(function(c){c.setAttribute('r',2.2*k);});
     svg.querySelectorAll('.vlbl').forEach(function(t){t.setAttribute('font-size',11*k);});
+    if(hovI!==null)unhover();   // 확대·이동하면 풍선 위치가 틀어지므로 닫는다(다시 올리면 뜬다)
   }
   function pt(e){var p=svg.createSVGPoint(); p.x=e.clientX; p.y=e.clientY;
     return p.matrixTransform(svg.getScreenCTM().inverse());}
@@ -401,7 +416,7 @@ draw();
     vb.x=c.x-(c.x-vb.x)*f; vb.y=c.y-(c.y-vb.y)*f; vb.w*=f; vb.h*=f; apply();
   }
   svg.addEventListener('wheel',function(e){e.preventDefault(); zoom(e.deltaY<0?0.8:1.25,pt(e));},{passive:false});
-  var drag=null, moved=false;
+  var moved=false;
   svg.addEventListener('pointerdown',function(e){if(e.target.closest('.vm'))return;
     drag={x:e.clientX,y:e.clientY,vx:vb.x,vy:vb.y}; moved=false; svg.classList.add('drag');
     svg.setPointerCapture(e.pointerId);});
@@ -433,11 +448,12 @@ draw();
     // 점수가 아니라 등급 색. 위험한 건 먼저 그려 안전한 점이 위에 오게 한다.
     var ord={'위험':0,'지분':0,'주의':1,'확인':2,'안전':3};
     cur.sort(function(a,b){return (ord[a.grade]||0)-(ord[b.grade]||0);});
+    byI={}; cur.forEach(function(p){byI[p._i]=p;});
+    unhover();
+    // 브라우저 기본 <title> 풍선은 1초 뒤에야 떠서 '아무 반응 없음'처럼 보였다 → 아래 vtip 으로 바로 띄운다
     mk.innerHTML=cur.map(function(p){
-      var t=esc(p.title||'')+(p.nb&&p.nb.n?' · 급매 '+esc(p.nb.p25)+' ~ 시세 '+esc(p.nb.med):'')
-        +(p.min_amt?' · 최저 '+esc(p.min_amt):'');
       var dim=(p.grade==='위험'||p.grade==='지분');
-      return '<g class="vm'+(dim?' dim':'')+'" data-i="'+p._i+'"><circle cx="'+p.xy[0]+'" cy="'+p.xy[1]+'" r="5" fill="'+p.gcolor+'"><title>'+t+'</title></circle></g>';
+      return '<g class="vm'+(dim?' dim':'')+'" data-i="'+p._i+'"><circle cx="'+p.xy[0]+'" cy="'+p.xy[1]+'" r="5" fill="'+p.gcolor+'"></circle></g>';
     }).join('');
     if(note)note.textContent='지도 '+cur.length+'건'+(v.length>cur.length?' (위치 못 찾음 '+(v.length-cur.length)+')':'');
     if(first&&wrap.offsetParent){first=false; fit(cur);} else apply();
@@ -450,8 +466,40 @@ draw();
     c.scrollIntoView({block:'center',behavior:'smooth'});
     document.querySelectorAll('.card.hl').forEach(function(x){x.classList.remove('hl');});
     c.classList.add('hl'); setTimeout(function(){c.classList.remove('hl');},1800);});
+  // 점에 마우스를 올리면: 점을 링으로 키우고 · 옆에 요약 풍선 · 목록의 그 카드에 테두리(스크롤은 안 함 — 클릭하면 이동)
+  // 링은 점을 다시 붙이지 않고 맨 위에 따로 그린다(커서 밑 요소를 옮기면 mouseover 가 되풀이된다).
+  function hover(g){
+    var p=byI[g.getAttribute('data-i')]; if(!p)return;
+    hovI=p._i;
+    ring.setAttribute('cx',p.xy[0]); ring.setAttribute('cy',p.xy[1]); ring.setAttribute('fill',p.gcolor);
+    ring.setAttribute('r',8*scale()); ring.style.display='';
+    var price=p.fv&&p.fv.w?'적정가 <b>'+esc(p.fv.w)+'</b>'
+             :(p.nb&&p.nb.n&&!p.nb.thin?'급매 '+esc(p.nb.p25)+' ~ 시세 '+esc(p.nb.med):'');
+    tip.innerHTML='<div class="vt1">'+esc(p.title||'')+(p.title2?' · '+esc(p.title2):'')+'</div>'
+      +'<div class="vt2"><span class="vg" style="background:'+esc(p.gcolor)+'">'+esc(p.grade||'')+'</span>'
+      +(p.fail?' 유찰 '+esc(p.fail)+'회':'')+(p.area?' · '+esc(p.area):'')+'</div>'
+      +'<div class="vt3">최저 <b>'+esc(p.min_amt||'-')+'</b>'+(price?' · '+price:'')+'</div>'
+      +'<div class="vt4">클릭하면 카드로 →</div>';
+    tip.style.display='block';
+    var wr=wrap.getBoundingClientRect(), cr=g.getBoundingClientRect();
+    var x=cr.left+cr.width/2-wr.left, y=cr.top+cr.height/2-wr.top, tw=tip.offsetWidth, th=tip.offsetHeight;
+    var left=x+14; if(left+tw>wr.width-8)left=x-14-tw;
+    var top=Math.max(8,Math.min(y-th/2,wr.height-th-8));
+    tip.style.left=Math.max(8,left)+'px'; tip.style.top=top+'px';
+    document.querySelectorAll('.card.hv').forEach(function(x){x.classList.remove('hv');});
+    var c=document.querySelector('.card[data-i="'+p._i+'"]'); if(c)c.classList.add('hv');
+  }
+  function unhover(){
+    hovI=null; ring.style.display='none'; tip.style.display='none';
+    document.querySelectorAll('.card.hv').forEach(function(x){x.classList.remove('hv');});
+  }
+  mk.addEventListener('mouseover',function(e){var g=e.target.closest('.vm'); if(g&&!drag)hover(g);});
+  mk.addEventListener('mouseout',function(e){var g=e.target.closest('.vm');
+    if(g&&!(e.relatedTarget&&g.contains(e.relatedTarget)))unhover();});
   // 카드에 마우스를 올리면 그 점을 강조
-  document.addEventListener('mouseover',function(e){var c=e.target.closest&&e.target.closest('.card[data-i]');
+  document.addEventListener('mouseover',function(e){
+    if(e.target.closest&&e.target.closest('#vmap'))return;   // 지도 위(점 hover)는 위에서 따로 — 여기서 지우면 점 강조가 바로 꺼진다
+    var c=e.target.closest&&e.target.closest('.card[data-i]');
     mk.querySelectorAll('.vm.hot').forEach(function(x){x.classList.remove('hot');});
     if(!c)return; var g=mk.querySelector('.vm[data-i="'+c.getAttribute('data-i')+'"]');
     if(g){g.classList.add('hot'); mk.appendChild(g);}});
