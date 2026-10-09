@@ -23,6 +23,7 @@
   a.btn small { font-weight: 400; font-size: 13px; opacity: .85; }
   .paid { background: #2563eb; }
   .free { background: #10b981; }
+  .hogang { background: #7048e8; }
   .note { font-size: 12px; color: #99a2ad; margin-top: 14px; }
 </style>
 </head>
@@ -31,6 +32,7 @@
   <h1 id="title">경매 물건</h1>
   <div class="case" id="case"></div>
   <a class="btn paid" id="btnPaid" style="display:none">🔑 옥션원에서 보기 <small>(유료회원)</small></a>
+  <a class="btn hogang" id="btnHogang" style="display:none">🏢 호갱노노에서 시세 보기 <small>(실거래·단지)</small></a>
   <a class="btn free" id="btnFree" style="display:none">🆓 무료로 보기 <small>(네이버 검색)</small></a>
   <div class="note">서울 아파트 경매 알리미 · @SeoulAPTauction</div>
 </div>
@@ -43,6 +45,14 @@
     var bp = document.getElementById("btnPaid");
     bp.href = "https://www.auction1.co.kr/auction/ca_view.php?product_id=" + encodeURIComponent(pid);
     bp.style.display = "block";
+  }
+  // 호갱노노: hg=단지번호(단지 페이지로 바로), 못 찾은 아파트는 hq=검색어(검색 화면) — 빌라엔 둘 다 없다
+  var hg = q.get("hg"), hq = q.get("hq");
+  if ((hg && /^[A-Za-z0-9]{1,12}$/.test(hg)) || hq) {
+    var bh = document.getElementById("btnHogang");
+    bh.href = hg && /^[A-Za-z0-9]{1,12}$/.test(hg) ? "https://hogangnono.com/apt/" + hg
+            : "https://hogangnono.com/search?q=" + encodeURIComponent(hq);
+    bh.style.display = "block";
   }
   if (cs) {
     var bf = document.getElementById("btnFree");
