@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<!-- 밝은 화면 전용 — 폰 다크 모드(텔레그램 안 브라우저·크롬 자동 어둡게)가 버튼 색을 남색·노란 글씨로 바꾸던 것 막기(10/9) -->
-<meta name="color-scheme" content="only light">
+<!-- 다크 모드 색은 이 페이지가 직접 정한다(아래 @media) — 브라우저 강제 어둡게(삼성 인터넷·크롬)가 버튼을 남색·노란 글씨로
+     바꾸던 것 막기. 다크여도 버튼은 각 사이트 상징색 그대로(10/9 사장님) -->
+<meta name="color-scheme" content="light dark">
 <title>경매 물건 보기</title>
 <style>
-  :root { color-scheme: only light; }
+  :root { color-scheme: light dark; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif; color: #1f2937;
          display: flex; min-height: 100vh; margin: 0; align-items: center; justify-content: center;
          background: #f5f6f8; }
@@ -30,6 +31,12 @@
           border-radius: 10px; padding: 8px 10px; margin: -2px 0 6px; text-align: left; word-break: keep-all; }
   .hint b { color: inherit; }
   .note { font-size: 12px; color: #99a2ad; margin-top: 16px; }
+  @media (prefers-color-scheme: dark) {        /* 배경·카드·글씨만 어둡게 — 버튼 색은 위 상징색 그대로 */
+    body { background: #17212b; color: #e8edf2; }
+    .card { background: #232e3c; box-shadow: 0 4px 20px rgba(0,0,0,.35); }
+    .case, .sec, .note { color: #8f9aa6; }
+    .hint { background: #1b2530; color: #aab4bf; }
+  }
 </style>
 </head>
 <body>
