@@ -33,6 +33,8 @@
   .hint { display: none; font-size: 12.5px; line-height: 1.5; color: #6b7682; background: #f1f3f5;
           border-radius: 10px; padding: 8px 10px; margin: -2px 0 6px; text-align: left; word-break: keep-all; }
   .hint b { color: inherit; }
+  .hint div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hint div.sub { white-space: normal; margin-top: 3px; font-size: 12px; opacity: .85; }
   .note { font-size: 12px; color: #99a2ad; margin-top: 16px; }
   @media (prefers-color-scheme: dark) {        /* 배경·카드·글씨만 어둡게 — 버튼 색은 위 상징색 그대로 */
     body { background: #17212b; color: #e8edf2; }
@@ -82,8 +84,11 @@
     var court = q.get("ct") || "";
     var year = cm[1], no = cm[2];
     var hint = document.getElementById("courtHint");
-    hint.innerHTML = "열리면 <b>법원 " + (court ? esc(court) : "(목록에서 선택)") + "</b> · <b>연도 " + year +
-                     "</b> · <b>번호 " + no + "</b> → 검색<br>번호는 누를 때 복사돼요 — 칸에 붙여넣기만 하세요.";
+    // 할 일 순서대로 한 줄씩 — 한 문장으로 이으면 '→ 검색'이 다음 줄로 떨어져 어색했다
+    hint.innerHTML = "<div>열린 화면에서</div>" +
+                     "<div>① 법원: <b>" + (court ? esc(court) : "목록에서 고르기") + "</b></div>" +
+                     "<div>② 사건번호: <b>" + year + " 타경 " + no + "</b> → 검색</div>" +
+                     "<div class=\"sub\">번호는 버튼을 누를 때 복사돼요. 칸에 붙여넣기만 하세요.</div>";
     hint.style.display = "block";
     var bc = show("btnCourt", "https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ159M00.xml");
     bc.addEventListener("click", function () { copy(no); });
