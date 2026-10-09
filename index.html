@@ -4,30 +4,28 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
+<!-- 밝은 화면 전용 — 폰 다크 모드(텔레그램 안 브라우저·크롬 자동 어둡게)가 버튼 색을 남색·노란 글씨로 바꾸던 것 막기(10/9) -->
+<meta name="color-scheme" content="only light">
 <title>경매 물건 보기</title>
 <style>
-  :root { color-scheme: light dark; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+  :root { color-scheme: only light; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif; color: #1f2937;
          display: flex; min-height: 100vh; margin: 0; align-items: center; justify-content: center;
          background: #f5f6f8; }
   .card { background: #fff; border-radius: 16px; padding: 26px 20px 22px; max-width: 420px; width: 88%;
           box-shadow: 0 4px 20px rgba(0,0,0,.08); text-align: center; }
-  @media (prefers-color-scheme: dark) {
-    body { background: #17212b; color: #eee; }
-    .card { background: #232e3c; }
-    .hint { background: #1b2530; }
-  }
   h1 { font-size: 17px; margin: 0 0 6px; line-height: 1.45; word-break: keep-all; }
   .case { color: #8a94a0; font-size: 14px; margin-bottom: 14px; }
   .sec { display: none; text-align: left; font-size: 13px; font-weight: 700; color: #8a94a0;
          margin: 16px 2px 2px; }
   a.btn { display: block; padding: 14px; border-radius: 12px; margin: 8px 0;
-          font-size: 16px; font-weight: 700; text-decoration: none; color: #fff; }
+          font-size: 16px; font-weight: 700; text-decoration: none; color: #fff; -webkit-text-fill-color: #fff; }
   a.btn small { font-weight: 400; font-size: 13px; opacity: .85; }
-  .paid { background: #2563eb; }
-  .court { background: #0f766e; }
-  .hogang { background: #7048e8; }
-  .naver { background: #03a94d; }
+  /* 같은 색 그라데이션 = 이미지 배경 — 강제로 어둡게 바꾸는 브라우저도 색을 덜 건드린다 */
+  .paid { background: #2563eb linear-gradient(#2563eb, #2563eb); }      /* 옥션원 */
+  .court { background: #0f766e linear-gradient(#0f766e, #0f766e); }     /* 법원경매정보 */
+  .hogang { background: #7048e8 linear-gradient(#7048e8, #7048e8); }    /* 호갱노노 */
+  .naver { background: #03a94d linear-gradient(#03a94d, #03a94d); }     /* 네이버부동산 */
   .hint { display: none; font-size: 12.5px; line-height: 1.5; color: #6b7682; background: #f1f3f5;
           border-radius: 10px; padding: 8px 10px; margin: -2px 0 6px; text-align: left; word-break: keep-all; }
   .hint b { color: inherit; }
