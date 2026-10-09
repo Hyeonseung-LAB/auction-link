@@ -88,7 +88,7 @@
     hint.innerHTML = "<div>열린 화면에서</div>" +
                      "<div>① 법원: <b>" + (court ? esc(court) : "목록에서 고르기") + "</b></div>" +
                      "<div>② 사건번호: <b>" + year + " 타경 " + no + "</b> → 검색</div>" +
-                     "<div class=\"sub\">번호는 버튼을 누를 때 복사돼요. 칸에 붙여넣기만 하세요.</div>";
+                     "<div class=\"sub\">번호는 복사돼 있어요 — 붙여넣기만 하세요.</div>";
     hint.style.display = "block";
     var bc = show("btnCourt", "https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ159M00.xml");
     bc.addEventListener("click", function () { copy(no); });
