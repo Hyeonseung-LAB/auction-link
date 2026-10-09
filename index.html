@@ -10,30 +10,44 @@
   body { font-family: -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
          display: flex; min-height: 100vh; margin: 0; align-items: center; justify-content: center;
          background: #f5f6f8; }
-  .card { background: #fff; border-radius: 16px; padding: 28px 22px; max-width: 420px; width: 88%;
+  .card { background: #fff; border-radius: 16px; padding: 26px 20px 22px; max-width: 420px; width: 88%;
           box-shadow: 0 4px 20px rgba(0,0,0,.08); text-align: center; }
   @media (prefers-color-scheme: dark) {
     body { background: #17212b; color: #eee; }
     .card { background: #232e3c; }
+    .hint { background: #1b2530; }
   }
   h1 { font-size: 17px; margin: 0 0 6px; line-height: 1.45; word-break: keep-all; }
-  .case { color: #8a94a0; font-size: 14px; margin-bottom: 22px; }
-  a.btn { display: block; padding: 15px; border-radius: 12px; margin: 10px 0;
+  .case { color: #8a94a0; font-size: 14px; margin-bottom: 14px; }
+  .sec { display: none; text-align: left; font-size: 13px; font-weight: 700; color: #8a94a0;
+         margin: 16px 2px 2px; }
+  a.btn { display: block; padding: 14px; border-radius: 12px; margin: 8px 0;
           font-size: 16px; font-weight: 700; text-decoration: none; color: #fff; }
   a.btn small { font-weight: 400; font-size: 13px; opacity: .85; }
   .paid { background: #2563eb; }
-  .free { background: #10b981; }
+  .court { background: #0f766e; }
   .hogang { background: #7048e8; }
-  .note { font-size: 12px; color: #99a2ad; margin-top: 14px; }
+  .naver { background: #03a94d; }
+  .hint { display: none; font-size: 12.5px; line-height: 1.5; color: #6b7682; background: #f1f3f5;
+          border-radius: 10px; padding: 8px 10px; margin: -2px 0 6px; text-align: left; word-break: keep-all; }
+  .hint b { color: inherit; }
+  .note { font-size: 12px; color: #99a2ad; margin-top: 16px; }
 </style>
 </head>
 <body>
 <div class="card">
   <h1 id="title">경매 물건</h1>
   <div class="case" id="case"></div>
+
+  <div class="sec" id="secAuction">📋 경매 정보</div>
   <a class="btn paid" id="btnPaid" style="display:none">🔑 옥션원에서 보기 <small>(유료회원)</small></a>
-  <a class="btn hogang" id="btnHogang" style="display:none">🏢 호갱노노에서 시세 보기 <small>(실거래·단지)</small></a>
-  <a class="btn free" id="btnFree" style="display:none">🆓 무료로 보기 <small>(네이버 검색)</small></a>
+  <a class="btn court" id="btnCourt" style="display:none">⚖️ 법원경매정보에서 보기 <small>(공식·무료)</small></a>
+  <div class="hint" id="courtHint"></div>
+
+  <div class="sec" id="secPrice">💰 시세</div>
+  <a class="btn hogang" id="btnHogang" style="display:none">🏢 호갱노노 <small>(실거래가·단지)</small></a>
+  <a class="btn naver" id="btnNaver" style="display:none">🟢 네이버부동산 <small>(지금 나온 매물)</small></a>
+
   <div class="note">서울 아파트 경매 알리미 · @SeoulAPTauction</div>
 </div>
 <script>
@@ -41,25 +55,60 @@
   var pid = q.get("pid"), cs = q.get("case"), t = q.get("t");
   if (t) document.getElementById("title").textContent = t;
   if (cs) document.getElementById("case").textContent = cs;
-  if (pid) {
-    var bp = document.getElementById("btnPaid");
-    bp.href = "https://www.auction1.co.kr/auction/ca_view.php?product_id=" + encodeURIComponent(pid);
-    bp.style.display = "block";
+  function show(id, href) {
+    var a = document.getElementById(id);
+    a.href = href;
+    a.style.display = "block";
+    return a;
   }
-  // 호갱노노: hg=단지번호(단지 페이지로 바로), 못 찾은 아파트는 hq=검색어(검색 화면) — 빌라엔 둘 다 없다
+  var auction = false, price = false;
+
+  // ① 경매 정보 — 옥션원(물건 화면 직행)
+  if (pid && /^\d{1,12}$/.test(pid)) {
+    show("btnPaid", "https://www.auction1.co.kr/auction/ca_view.php?product_id=" + pid);
+    auction = true;
+  }
+  // ① 경매 정보 — 법원경매정보: 사건 화면 직링크가 없다(검색이 화면 안 POST). 번호를 복사해 두고 '경매사건검색'을 연다.
+  var cm = (cs || "").match(/^(\d{4})타경(\d+)$/);
+  if (cm) {
+    var court = q.get("ct") || "";
+    var year = cm[1], no = cm[2];
+    var hint = document.getElementById("courtHint");
+    hint.innerHTML = "열리면 <b>법원 " + (court ? esc(court) : "(목록에서 선택)") + "</b> · <b>연도 " + year +
+                     "</b> · <b>번호 " + no + "</b> → 검색<br>번호는 누를 때 복사돼요 — 칸에 붙여넣기만 하세요.";
+    hint.style.display = "block";
+    var bc = show("btnCourt", "https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ159M00.xml");
+    bc.addEventListener("click", function () { copy(no); });
+    auction = true;
+  }
+  // ② 시세 — 호갱노노: hg=단지번호(단지 페이지로 바로), 못 찾은 아파트는 hq=검색어. 빌라엔 둘 다 없다.
   var hg = q.get("hg"), hq = q.get("hq");
-  if ((hg && /^[A-Za-z0-9]{1,12}$/.test(hg)) || hq) {
-    var bh = document.getElementById("btnHogang");
-    bh.href = hg && /^[A-Za-z0-9]{1,12}$/.test(hg) ? "https://hogangnono.com/apt/" + hg
-            : "https://hogangnono.com/search?q=" + encodeURIComponent(hq);
-    bh.style.display = "block";
+  if (hg && /^[A-Za-z0-9]{1,12}$/.test(hg)) {
+    show("btnHogang", "https://hogangnono.com/apt/" + hg); price = true;
+  } else if (hq) {
+    show("btnHogang", "https://hogangnono.com/search?q=" + encodeURIComponent(hq)); price = true;
   }
-  if (cs) {
-    var bf = document.getElementById("btnFree");
-    bf.href = "https://search.naver.com/search.naver?query=" + encodeURIComponent(cs);
-    bf.style.display = "block";
+  // ② 시세 — 네이버부동산 검색(아파트 '동 단지명', 빌라 '구 동 빌라')
+  var nq = q.get("nq");
+  if (nq) {
+    show("btnNaver", "https://m.land.naver.com/search/result/" + encodeURIComponent(nq)); price = true;
   }
+  if (auction) document.getElementById("secAuction").style.display = "block";
+  if (price) document.getElementById("secPrice").style.display = "block";
   if (t) document.title = t + " | 보기 선택";
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) { return {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]; });
+  }
+  function copy(text) {
+    // 동기 복사(execCommand)를 먼저 — 링크로 넘어가는 순간 비동기 복사가 끊기는 브라우저가 있다
+    try {
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
+    } catch (e) {}
+    try { if (navigator.clipboard) navigator.clipboard.writeText(text); } catch (e) {}
+  }
 </script>
 </body>
 </html>
