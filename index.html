@@ -82,14 +82,18 @@
     auction = true;
   }
   // ② 시세 — 호갱노노: hg=단지번호(단지 페이지로 바로), 못 찾은 아파트는 hq=검색어. 빌라엔 둘 다 없다.
-  var hg = q.get("hg"), hq = q.get("hq");
+  var hg = q.get("hg"), hq = q.get("hq"), nq = q.get("nq");
+  // 옛 링크(10/9 전 텔레그램·그날 아침 게시본)엔 hg·hq·nq 가 없다 → 제목(t)에서 '동 단지명'을 뽑아 검색 화면으로라도 잇는다
+  if (!hg && !hq && !nq && t) {
+    var fb = guessQuery(t);
+    if (fb) { hq = fb; nq = fb; }
+  }
   if (hg && /^[A-Za-z0-9]{1,12}$/.test(hg)) {
     show("btnHogang", "https://hogangnono.com/apt/" + hg); price = true;
   } else if (hq) {
     show("btnHogang", "https://hogangnono.com/search?q=" + encodeURIComponent(hq)); price = true;
   }
   // ② 시세 — 네이버부동산 검색(아파트 '동 단지명', 빌라 '구 동 빌라')
-  var nq = q.get("nq");
   if (nq) {
     show("btnNaver", "https://m.land.naver.com/search/result/" + encodeURIComponent(nq)); price = true;
   }
@@ -97,6 +101,17 @@
   if (price) document.getElementById("secPrice").style.display = "block";
   if (t) document.title = t + " | 보기 선택";
 
+  function guessQuery(title) {
+    // '영등포구 양평동1가 271, 영등포중흥에스클래스 101동 7층 705호' → '양평동1가 영등포중흥에스클래스'
+    // (hogang.query 와 같은 규칙 — 쉼표 앞 끝이 번지, 그 앞이 동, 쉼표 뒤 첫 낱말이 단지명. '201동'·'3층'뿐이면 포기)
+    var i = title.indexOf(",");
+    if (i < 0) return "";
+    var head = title.slice(0, i).trim().split(/\s+/), tail = title.slice(i + 1).trim().split(/\s+/);
+    if (head.length < 2 || !/\d/.test(head[head.length - 1])) return "";
+    var name = tail[0] || "";
+    if (!name || /^[\d-]+(동|층|호)?$|^제?\d/.test(name)) return "";
+    return head[head.length - 2] + " " + name;
+  }
   function esc(s) {
     return String(s).replace(/[&<>"]/g, function (c) { return {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]; });
   }
