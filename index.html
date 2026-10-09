@@ -104,7 +104,8 @@
     // (hogang.query 와 같은 규칙 — 쉼표 앞 끝이 번지, 그 앞이 동, 쉼표 뒤 첫 낱말이 단지명. '201동'·'3층'뿐이면 포기)
     var i = title.indexOf(",");
     if (i < 0) return "";
-    var head = title.slice(0, i).trim().split(/\s+/), tail = title.slice(i + 1).trim().split(/\s+/);
+    var head = title.slice(0, i).replace(/\s*외\s*\d+\s*필지/, "").trim().split(/\s+/),   // '804 외 1필지' → '804'
+        tail = title.slice(i + 1).trim().split(/\s+/);
     if (head.length < 2 || !/\d/.test(head[head.length - 1])) return "";
     var name = tail[0] || "";
     if (!name || /^[\d-]+(동|층|호)?$|^제?\d/.test(name)) return "";
