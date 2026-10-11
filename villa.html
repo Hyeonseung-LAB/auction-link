@@ -75,7 +75,9 @@ footer{color:#9aa0a8;font-size:12px;text-align:center;padding:20px 0 12px;line-h
 .rfchip,.sheet-handle,.vfoot .note{display:none}
 @media(max-width:760px){
   .page{max-width:100%;padding:10px 12px}
-  #list{grid-template-columns:1fr}
+  /* minmax(0,…) — 그냥 1fr 은 '가장 넓은 카드의 최소 폭'(약 361px)보다 안 줄어, 360폭 폰(S25)에서 목록이
+     화면보다 13px 넓어져 좌우로 흔들렸다(10/11 사장님). 카드 안 글씨는 줄바꿈으로 다 들어간다(실측). */
+  #list{grid-template-columns:minmax(0,1fr)}
   .bar{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}
   .bar::-webkit-scrollbar{display:none}
   .cnt{display:none}
@@ -103,7 +105,8 @@ footer{color:#9aa0a8;font-size:12px;text-align:center;padding:20px 0 12px;line-h
   .vapp .vmz button{width:38px;height:38px;font-size:17px}
   .vapp .vsheet{flex:0 0 auto;height:40vh;min-height:0;background:#fff;border-radius:20px 20px 0 0;
     box-shadow:0 -6px 22px rgba(20,30,60,.14);overflow-y:auto;overscroll-behavior:contain;
-    padding:0 12px 16px;position:relative;z-index:10;transition:height .26s cubic-bezier(.4,0,.2,1)}
+    padding:0 13px 16px;position:relative;z-index:10;transition:height .26s cubic-bezier(.4,0,.2,1);
+    overflow-x:hidden}                                  /* 좌우 여백 13px = 아파트 시트(.pclist)와 같게 */
   .vapp .sheet-handle{display:flex;flex-direction:column;gap:7px;position:sticky;top:0;background:#fff;
     padding:9px 0 8px;z-index:3;touch-action:none;cursor:grab}
   .vapp .sheet-handle .grab{width:38px;height:5px;border-radius:3px;background:#dbe1e8;align-self:center}
