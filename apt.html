@@ -2489,7 +2489,7 @@ function sheetHtml(p){
     h+='<div class="drow" style="color:#adb5bd;font-size:12px">권리 위험은 별도 — 이 밴드는 가격만 봅니다.</div>';
   }else h+='<div class="dv none">같은 조건(구·면적)의 낙찰 사례가 8건 미만이라 기준을 낼 수 없어요.</div>';
   // 단지 최근 낙찰
-  if(p.cs)h+='<div class="dsec">🏘 같은 단지 최근 낙찰</div><div class="drow">'+esc(p.cs.d)+' · <b>'+esc(p.cs.amt)+'</b>'+(p.cs.rate?' (감정가의 '+p.cs.rate+'%)':'')+(p.cs.n?' · 응찰 '+p.cs.n+'명':'')+'</div>';
+  if(p.cs)h+='<div class="dsec">🏢 같은 단지 최근 낙찰</div><div class="drow">'+esc(p.cs.d)+' · <b>'+esc(p.cs.amt)+'</b>'+(p.cs.rate?' (감정가의 '+p.cs.rate+'%)':'')+(p.cs.n?' · 응찰 '+p.cs.n+'명':'')+'</div>';
   // 제원·입지
   const sp=[p.area?'전용 '+esc(p.area):'', p.year?'준공 '+p.year+'년':'', p.units?p.units.toLocaleString()+'세대':''].filter(Boolean);
   if(sp.length||p.subway){h+='<div class="dsec">📐 제원·입지</div>';
