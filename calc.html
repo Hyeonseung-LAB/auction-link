@@ -1,0 +1,1017 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><title>경매 계산기</title><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%A7%AE</text></svg>"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body><style>.snav{display:flex;gap:6px;overflow-x:auto;padding:12px 16px 0;max-width:1240px;margin:0 auto;scrollbar-width:none}.snav::-webkit-scrollbar{display:none}.snav a{flex:0 0 auto;padding:7px 13px;border-radius:999px;font:600 13px/1.2 'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;text-decoration:none;color:#566275;background:#fff;border:1.5px solid #d2d8e1;white-space:nowrap}.snav a.on{background:#16202e;color:#fff;border-color:#16202e;box-shadow:inset 0 0 0 200px #16202e}@media (prefers-color-scheme:dark){.snav a{background:#161d27;color:#97a3b4;border-color:#2a3443}.snav a.on{background:#e3e8ef;color:#0e131a;border-color:#e3e8ef;box-shadow:inset 0 0 0 200px #e3e8ef}}</style><nav class="snav" aria-label="빌라 경매 사이트"><a href="villa.html">🏡 빌라 매물</a><a href="villa_results.html">🔨 매각 결과</a><a href="calendar.html">📅 캘린더</a><a href="calc.html" class="on" aria-current="page">🧮 계산기</a><a href="bids.html">📝 입찰기록</a></nav>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Noto+Serif+KR:wght@700;900&display=swap">
+<style>
+/* 레이아웃: 매각물건명세서처럼 괘선 표로 된 입력 양식(왼쪽) + 인주색 도장 상자로 찍힌 결과 패널(오른쪽, 따라 내려옴) */
+:root{
+  --paper:#EEF1F5;
+  --sheet:#FFFFFF;
+  --label:#F5F7FA;
+  --ink:#16202E;
+  --muted:#566275;
+  --rule:#D2D8E1;
+  --rule-strong:#16202E;
+  --seal:#BC3A2D;
+  --seal-soft:#FBE8E5;
+  --blue:#285CA4;
+  --blue-soft:#E5EDF8;
+  --good:#1B7646;
+  --good-soft:#E2F2E8;
+  --bad:#B02A20;
+  --bad-soft:#FBE5E2;
+  --warn:#8A5300;
+  --warn-soft:#FFF1D9;
+  --seg-bid:#7D8DA3;
+  --seg-cost:#BFC9D6;
+  --font-display:"Noto Serif KR","Nanum Myeongjo","AppleMyungjo",serif;
+  --font-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --font-num:"IBM Plex Mono","IBM Plex Sans KR",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0E131A; --sheet:#161D27; --label:#1B2330; --ink:#E3E8EF; --muted:#97A3B4;
+    --rule:#2A3443; --rule-strong:#B9C4D3;
+    --seal:#EE6B5C; --seal-soft:#3A1E1B; --blue:#88AFEA; --blue-soft:#1B2940;
+    --good:#5DC28D; --good-soft:#15301F; --bad:#F2877D; --bad-soft:#3A1C1A; --warn:#E6AA52; --warn-soft:#332611;
+    --seg-bid:#6A7C94; --seg-cost:#3A4759;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0E131A; --sheet:#161D27; --label:#1B2330; --ink:#E3E8EF; --muted:#97A3B4;
+  --rule:#2A3443; --rule-strong:#B9C4D3;
+  --seal:#EE6B5C; --seal-soft:#3A1E1B; --blue:#88AFEA; --blue-soft:#1B2940;
+  --good:#5DC28D; --good-soft:#15301F; --bad:#F2877D; --bad-soft:#3A1C1A; --warn:#E6AA52; --warn-soft:#332611;
+  --seg-bid:#6A7C94; --seg-cost:#3A4759;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1200px;margin:0 auto;padding-inline:20px;padding-block:28px 120px}
+@media (max-width:480px){.wrap{padding-inline:16px}}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.eyebrow{font-size:12px;letter-spacing:.08em;color:var(--muted);font-weight:600}
+h1{font-family:var(--font-display);font-weight:900;font-size:clamp(28px,4vw,40px);line-height:1.15;margin:.15em 0 .35em;text-wrap:balance;letter-spacing:-.01em}
+.lede{color:var(--muted);max-width:62ch;margin:0}
+.head-top{display:flex;justify-content:space-between;align-items:flex-end;gap:10px 16px;flex-wrap:wrap}
+.head-top h1{margin-bottom:.2em}
+a.btn{text-decoration:none;display:inline-flex;align-items:center;margin-bottom:.4em}
+.current{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline;margin-top:18px;padding-top:14px;border-top:2px solid var(--rule-strong)}
+.current .cur-name{font-weight:700;font-size:17px}
+.current .cur-case{color:var(--muted);font-size:13.5px}
+.pill{font-size:12px;padding:1px 9px;border-radius:999px;border:1px solid var(--rule);color:var(--muted);align-self:center}
+.pill.dirty{border-color:var(--warn);color:var(--warn);background:var(--warn-soft)}
+.pill.saved{border-color:var(--good);color:var(--good);background:var(--good-soft)}
+
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,392px);gap:24px;align-items:start;margin-top:22px}
+@media (max-width:940px){.grid{grid-template-columns:minmax(0,1fr)}}
+.stack{display:flex;flex-direction:column;gap:18px;min-width:0}
+
+.sheet{background:var(--sheet);border:1px solid var(--rule-strong);min-width:0}
+.sheet>h2{margin:0;display:flex;align-items:baseline;justify-content:space-between;gap:4px 12px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--rule-strong);font-family:var(--font-display);font-size:16px;font-weight:700;text-wrap:balance}
+.sheet>h2 small{font-family:var(--font-body);font-weight:400;font-size:12.5px;color:var(--muted)}
+.row{display:grid;grid-template-columns:172px minmax(0,1fr);border-top:1px solid var(--rule)}
+.rows>.row:first-child{border-top:0}
+.row>.lab{background:var(--label);border-right:1px solid var(--rule);padding:11px 12px;font-size:13.5px;font-weight:500;color:var(--muted);display:flex;flex-wrap:wrap;align-items:flex-start;gap:4px 6px;margin:0}
+.row.strong>.lab{color:var(--ink);font-weight:700}
+.field{padding:7px 10px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;min-width:0}
+.field .hint{flex-basis:100%;font-size:12.5px;color:var(--muted);line-height:1.45}
+.field .hint:empty{display:none}
+input.txt,input.num-in{font:inherit;color:var(--ink);background:var(--sheet);border:1px solid var(--rule);border-radius:4px;padding:7px 10px;min-width:0}
+input.num-in{font-family:var(--font-num);font-variant-numeric:tabular-nums;text-align:right;width:15ch;max-width:100%}
+input.num-in.short{width:8ch}
+input.txt{width:100%;max-width:28rem}
+.row.strong input.num-in{border-color:var(--rule-strong);font-weight:600}
+input:focus-visible,button:focus-visible,input[type=range]:focus-visible,a:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.unit{color:var(--muted);font-size:13.5px}
+.kr{font-size:12.5px;color:var(--muted)}
+.x{font-size:12.5px;color:var(--blue);font-weight:500}
+.badge{font-size:11px;font-weight:700;color:var(--warn);background:var(--warn-soft);border:1px solid var(--warn);border-radius:3px;padding:0 5px;line-height:1.6}
+.tag{font-size:11px;color:var(--muted);border:1px solid var(--rule);border-radius:3px;padding:0 5px}
+output.auto{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:600}
+.check{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer}
+.check input{width:17px;height:17px;accent-color:var(--blue);margin:0}
+input[type=range]{flex-basis:100%;width:100%;accent-color:var(--seal);margin:4px 0 2px}
+.chips{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px}
+.chip-btn{font:inherit;font-size:12.5px;padding:3px 10px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);border-radius:999px;cursor:pointer}
+.chip-btn[aria-pressed="true"]{border-color:var(--blue);background:var(--blue-soft);color:var(--blue);font-weight:600}
+@media (max-width:560px){
+  .row{grid-template-columns:minmax(0,1fr)}
+  .row>.lab{border-right:0;border-bottom:1px dashed var(--rule);padding:8px 12px 6px}
+}
+
+.panel{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px);display:flex;flex-direction:column;gap:14px;min-width:0;max-height:calc(100vh - 32px);overflow-y:auto;overscroll-behavior:contain}
+@media (max-width:940px){.panel{position:static;max-height:none;overflow:visible}}
+.result{background:var(--sheet);border:1px solid var(--rule-strong)}
+.result-head{padding:14px 16px 12px;border-bottom:1px solid var(--rule)}
+.bidline{display:flex;align-items:baseline;gap:4px 10px;flex-wrap:wrap}
+.big{font-size:24px;font-weight:600}
+.sub{font-size:12.5px;color:var(--muted)}
+.chip{font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;font-family:var(--font-body)}
+.chip.good{background:var(--good-soft);color:var(--good)}
+.pos{color:var(--good)}
+.neg{color:var(--bad)}
+.hero{padding:16px 16px 14px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:3px}
+.hero-q{margin:0;font-size:13.5px;color:var(--muted)}
+.hero-label{font-size:13.5px;font-weight:600}
+.hero-num{font-size:32px;font-weight:600;line-height:1.15;overflow-wrap:anywhere}
+.hero-num.hero-empty{font-size:16px;font-weight:500;color:var(--muted);font-family:var(--font-body)}
+.hero-sub{margin:0;font-size:13px;color:var(--muted)}
+.vs{margin:8px 0 0;font-size:13px;line-height:1.45;padding:8px 10px;background:var(--label);border-radius:4px}
+.blk{padding:14px 16px;border-bottom:1px solid var(--rule)}
+.blk-title{margin:0 0 8px;font-size:12px;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.flow{margin:0;display:grid;gap:3px}
+.flow>div{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:13.5px}
+.flow dt{color:var(--muted)}
+.flow dd{margin:0;font-family:var(--font-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+.flow .total{border-top:1px solid var(--rule-strong);padding-top:5px;margin-top:3px;font-weight:700}
+.flow .total dt{color:var(--ink)}
+.taxgrid{margin-top:14px;display:grid;gap:3px;font-size:13.5px}
+.tg-row{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:baseline}
+.tg-row>span:first-child{color:var(--muted)}
+.tg-row>span:not(:first-child){text-align:right;font-family:var(--font-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tg-head>span:not(:first-child){font-family:var(--font-body);font-size:12px;font-weight:700;color:var(--ink);white-space:normal}
+.tg-row.total{border-top:1px solid var(--rule-strong);padding-top:5px;margin-top:3px;font-weight:700}
+.tg-row.total>span:first-child{color:var(--ink)}
+.tg-row.why>span:not(:first-child){font-family:var(--font-body);font-size:11.5px;color:var(--muted);white-space:normal;line-height:1.35}
+.bars{display:grid;gap:10px}
+.bar-top{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;margin-bottom:4px}
+.bar-top b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:600}
+.bar{display:flex;gap:2px;height:14px}
+.bar>span{flex:1 1 0;min-width:2px;border-radius:2px}
+.seg-bid{background:var(--seg-bid)}
+.seg-cost{background:var(--seg-cost)}
+.seg-tax{background:var(--seal)}
+.seg-net{background:var(--good)}
+.legend{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.cashsteps{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.cashsteps li{display:grid;grid-template-columns:5em minmax(0,1fr) auto;gap:8px;align-items:baseline;font-size:13.5px}
+.cashsteps .when{font-size:12px;color:var(--muted)}
+.cashsteps b{font-family:var(--font-num);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cs-total{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--rule-strong);margin-top:6px;padding-top:6px;font-weight:700;font-size:14px}
+.cs-total b{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+.safe p{margin:0;font-size:13.5px}
+.safe p+p{margin-top:4px}
+.safe b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:15px}
+.flags{list-style:none;margin:0;padding:10px 16px 14px;display:flex;flex-direction:column;gap:6px}
+.flags:empty{display:none}
+.flags li{font-size:12.5px;padding:6px 9px;border-radius:4px;line-height:1.4}
+.flags .good{background:var(--good-soft);color:var(--good)}
+.flags .warn{background:var(--warn-soft);color:var(--warn)}
+.flags .bad{background:var(--bad-soft);color:var(--bad)}
+
+.seal{background:var(--sheet);border:2px solid var(--seal);padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.seal-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.seal-title{font-family:var(--font-display);font-weight:900;font-size:18px;color:var(--seal);letter-spacing:.02em;margin:0}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+.seg button{font:inherit;font-size:12.5px;padding:4px 10px;border:0;background:var(--sheet);color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--seal);color:var(--sheet);font-weight:600}
+.seal-target{display:flex;align-items:center;gap:6px 8px;flex-wrap:wrap;font-size:13.5px}
+.seal-target label{color:var(--muted)}
+.seal-out{display:grid;gap:10px}
+.seal-line{display:flex;justify-content:space-between;align-items:baseline;gap:4px 12px;flex-wrap:wrap}
+.seal-line .who{font-size:13px;color:var(--muted)}
+.seal-line .val{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:600;font-size:16px;text-align:right}
+.seal-line.main .val{font-size:24px;color:var(--seal)}
+.seal-line .sub{flex-basis:100%;text-align:right}
+.seal-line .sub.bad{color:var(--bad)}
+.btn{font:inherit;font-size:13.5px;font-weight:600;padding:8px 14px;border-radius:6px;border:1px solid var(--rule-strong);background:var(--ink);color:var(--sheet);cursor:pointer}
+.btn.ghost{background:var(--sheet);color:var(--ink)}
+.btn.seal-btn{border-color:var(--seal);color:var(--seal);background:var(--sheet)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.savebar{display:flex;flex-direction:column;gap:8px}
+.savebar .btns{display:flex;flex-wrap:wrap;gap:8px}
+.savebar .msg{font-size:12.5px;color:var(--muted)}
+
+.wide{margin-top:18px}
+.table-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:8px 12px;border-bottom:1px solid var(--rule);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{font-size:12px;color:var(--muted);font-weight:600;background:var(--label)}
+td.n{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+tr.cur td{background:var(--blue-soft)}
+td.neg{color:var(--bad)}
+td.pos{color:var(--good)}
+td .small{display:block;font-size:12px;color:var(--muted)}
+.breakdown{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.bd{padding:12px 16px 14px;min-width:0}
+.bd+.bd{border-left:1px solid var(--rule)}
+@media (max-width:900px){.breakdown{grid-template-columns:minmax(0,1fr)}.bd+.bd{border-left:0;border-top:1px solid var(--rule)}}
+.bd h3{margin:0 0 8px;font-size:13.5px;font-weight:700}
+.bd dl{margin:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;font-size:13px}
+.bd dt{color:var(--muted)}
+.bd dd{margin:0;text-align:right;font-family:var(--font-num);font-variant-numeric:tabular-nums}
+.bd .tot{border-top:1px solid var(--rule-strong);padding-top:5px;font-weight:700;color:var(--ink)}
+.empty{padding:18px 16px;color:var(--muted);margin:0}
+.deal-actions{display:flex;gap:6px;justify-content:flex-end}
+.link-btn{font:inherit;font-size:12.5px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);border-radius:4px;padding:3px 9px;cursor:pointer;white-space:nowrap}
+.link-btn.danger{color:var(--bad);border-color:var(--bad)}
+.link-btn.armed{background:var(--bad);border-color:var(--bad);color:var(--sheet)}
+.link-btn.armed-load{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+tr.clickable{cursor:pointer}
+tr.clickable:hover td{background:var(--label)}
+tr.clickable.cur td,tr.clickable.cur:hover td{background:var(--blue-soft)}
+.name-btn{font:inherit;font-weight:700;background:none;border:0;padding:0;color:var(--ink);cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:3px}
+.name-btn:hover{text-decoration-color:var(--ink)}
+.confirm-strip{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--warn-soft);color:var(--warn);border-bottom:1px solid var(--rule);font-size:13.5px}
+
+.notes{margin-top:22px;font-size:12.5px;color:var(--muted);max-width:82ch}
+.notes h2{font-size:13px;color:var(--ink);margin:0 0 6px}
+.notes ul{margin:0;padding-left:18px;display:grid;gap:3px}
+
+.dock{display:none}
+@media (max-width:940px){
+  .dock{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:5;gap:12px;align-items:center;justify-content:space-between;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:var(--sheet);border-top:2px solid var(--rule-strong)}
+  .dock>div{display:flex;flex-direction:column;min-width:0}
+  .dock .lab{font-size:11px;color:var(--muted)}
+  .dock b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:15px}
+  .dock b.neg{color:var(--bad)}
+  .dock .btn{text-decoration:none;padding:7px 12px}
+}
+#toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--sheet);padding:8px 14px;border-radius:6px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:calc(100% - 32px)}
+#toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="head-top">
+      <div>
+        <div class="eyebrow">법원경매 · 개인 매매사업자 기준</div>
+        <h1>경매 계산기</h1>
+      </div>
+      <a class="btn ghost" href="calendar.html">경매 캘린더 열기</a>
+    </div>
+    <p class="lede">입찰가를 넣으면 낙찰 후 들어가는 돈, 매매사업자와 개인 양도세의 세후 이익, 목표 이익을 남기는 최대 입찰가를 계산해요.</p>
+    <div class="current">
+      <span class="cur-name" id="cur-name"></span>
+      <span class="cur-case num" id="cur-case"></span>
+      <span class="pill" id="cur-status"></span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="stack" id="form"></div>
+
+    <aside class="panel" id="results" aria-label="계산 결과">
+      <div class="result">
+        <div class="result-head">
+          <div class="eyebrow">입찰가</div>
+          <div class="bidline"><span id="r-bid" class="num big"></span><span id="r-bidpct" class="sub"></span></div>
+        </div>
+        <div class="hero">
+          <p class="hero-q" id="r-story"></p>
+          <div class="hero-label" id="r-main-label"></div>
+          <div class="hero-num num" id="r-main-net"></div>
+          <p class="hero-sub" id="r-main-sub"></p>
+          <p class="vs" id="r-vs" hidden></p>
+        </div>
+        <div class="blk">
+          <h3 class="blk-title">팔았을 때 돈의 흐름</h3>
+          <dl class="flow">
+            <div><dt>예상 매도가</dt><dd id="fl-sell"></dd></div>
+            <div><dt>낙찰가</dt><dd id="fl-bid"></dd></div>
+            <div><dt>취득세·법무사</dt><dd id="fl-acq"></dd></div>
+            <div><dt>수리·명도·관리비·기타</dt><dd id="fl-fix"></dd></div>
+            <div><dt>보유비·중개보수</dt><dd id="fl-hold"></dd></div>
+            <div class="total"><dt>세전 이익</dt><dd id="fl-pre"></dd></div>
+          </dl>
+          <div class="taxgrid">
+            <div class="tg-row tg-head"><span></span><span>매매사업자 <span class="chip good" id="better-biz" hidden>유리</span></span><span>개인 양도세 <span class="chip good" id="better-cgt" hidden>유리</span></span></div>
+            <div class="tg-row"><span>세전 이익</span><span id="tg-pre-biz"></span><span id="tg-pre-cgt"></span></div>
+            <div class="tg-row"><span>기장·신고</span><span id="tg-bk"></span><span>없음</span></div>
+            <div class="tg-row"><span>세금</span><span id="r-biz-tax"></span><span id="r-cgt-tax"></span></div>
+            <div class="tg-row total"><span>세후 순이익</span><span id="r-biz-net"></span><span id="r-cgt-net"></span></div>
+            <div class="tg-row"><span>넣은 현금 대비</span><span id="r-biz-roi"></span><span id="r-cgt-roi"></span></div>
+            <div class="tg-row why"><span>적용 세율</span><span id="r-biz-rule"></span><span id="r-cgt-rule"></span></div>
+          </div>
+        </div>
+        <div class="blk">
+          <h3 class="blk-title" id="bars-title">매도가가 어디로 가나</h3>
+          <div class="bars" id="bars"></div>
+          <ul class="legend" aria-hidden="true"><li><i class="seg-bid"></i>낙찰가</li><li><i class="seg-cost"></i>비용</li><li><i class="seg-tax"></i>세금</li><li><i class="seg-net"></i>남는 돈</li></ul>
+        </div>
+        <div class="blk">
+          <h3 class="blk-title">준비할 현금</h3>
+          <ol class="cashsteps">
+            <li><span class="when">입찰 당일</span><span class="what">입찰보증금</span><b id="cs-dep"></b></li>
+            <li><span class="when">잔금 때</span><span class="what" id="cs-bal-what">잔금 (낙찰가 − 보증금)</span><b id="cs-bal"></b></li>
+            <li><span class="when">잔금 때</span><span class="what">취득세·법무사</span><b id="cs-acq"></b></li>
+            <li><span class="when">수리할 때</span><span class="what">수리·명도·관리비·기타</span><b id="cs-fix"></b></li>
+            <li><span class="when">팔 때까지</span><span class="what">이자·재산세·유지비</span><b id="cs-hold"></b></li>
+          </ol>
+          <div class="cs-total"><span>들어가는 현금 합계</span><b id="r-cash"></b></div>
+        </div>
+        <div class="blk safe">
+          <h3 class="blk-title">손해 안 보는 선</h3>
+          <p><b id="r-be"></b> 아래로 팔면 손해예요 <span class="sub">(세금 내기 전 기준)</span></p>
+          <p id="r-margin"></p>
+        </div>
+        <ul class="flags" id="flags"></ul>
+      </div>
+
+      <div class="seal">
+        <div class="seal-head">
+          <h2 class="seal-title">최대 입찰가</h2>
+          <div class="seg" role="group" aria-label="목표 기준">
+            <button type="button" id="t-won" aria-pressed="true">순이익으로</button>
+            <button type="button" id="t-pct" aria-pressed="false">수익률로</button>
+          </div>
+        </div>
+        <div class="seal-target" id="tw-wrap">
+          <label for="f-targetWon">세후 순이익을 최소</label>
+          <input type="text" class="num-in" id="f-targetWon" inputmode="numeric" autocomplete="off"><span class="unit">원 남기려면</span>
+        </div>
+        <div class="seal-target" id="tp-wrap" hidden>
+          <label for="f-targetPct">들어간 현금 대비 최소</label>
+          <input type="text" class="num-in short" id="f-targetPct" inputmode="decimal" autocomplete="off"><span class="unit">% 남기려면</span>
+        </div>
+        <div class="seal-out">
+          <div class="seal-line main"><span class="who">매매사업자로 팔 때</span><span class="val" id="mb-biz"></span><span class="sub" id="mb-biz-sub"></span></div>
+          <div class="seal-line"><span class="who">개인 양도세로 팔 때</span><span class="val" id="mb-cgt"></span><span class="sub" id="mb-cgt-sub"></span></div>
+        </div>
+        <div><button type="button" class="btn seal-btn" id="apply-max">매매사업자 최대 입찰가를 입찰가에 넣기</button></div>
+      </div>
+
+      <div class="savebar">
+        <div class="btns">
+          <button type="button" class="btn" id="btn-save" disabled>저장</button>
+          <button type="button" class="btn ghost" id="btn-save-new" disabled>새 물건으로 저장</button>
+          <button type="button" class="btn ghost" id="btn-new">새 물건 입력</button>
+        </div>
+        <div class="msg" id="save-msg">저장 기능을 연결하는 중이에요.</div>
+      </div>
+    </aside>
+  </div>
+
+  <section class="sheet wide" aria-labelledby="h-sens">
+    <h2 id="h-sens"><span>입찰가별 손익</span><small>최저가부터 올려가며 비교. 파란 줄이 지금 입찰가</small></h2>
+    <div class="table-wrap"><table id="sens"></table></div>
+  </section>
+
+  <section class="sheet wide" aria-labelledby="h-bd">
+    <h2 id="h-bd"><span>계산 내역</span><small>원 단위 그대로</small></h2>
+    <div class="breakdown" id="breakdown"></div>
+  </section>
+
+  <section class="sheet wide" aria-labelledby="h-deals">
+    <h2 id="h-deals"><span>저장한 물건</span><small id="deals-count"></small></h2>
+    <div id="deals-body"><p class="empty">저장한 물건이 여기에 나란히 나와요. 오른쪽 위 ‘저장’을 누르면 추가돼요.</p></div>
+  </section>
+
+  <section class="notes" aria-labelledby="h-notes">
+    <h2 id="h-notes">계산 기준</h2>
+    <ul>
+      <li>세율은 2026년 10월 기준 종합소득·양도소득 기본세율(6~45%)이고, 지방소득세 10%를 더했어요.</li>
+      <li>매매사업자는 사업성이 인정된다는 전제예요. 이익을 근로소득 과세표준 위에 얹어 늘어나는 세금만 계산해요. 건강보험료 증가분과 결손금 이월은 빠져 있어요.</li>
+      <li>조정대상지역 다주택이면 매매사업자도 비교과세(양도세 중과와 비교해 큰 쪽)로 계산해요.</li>
+      <li>개인 양도세 경비는 낙찰가·취득세·법무사·자본적 지출·중개보수만 넣었어요. 명도비·이자·도배장판·관리비는 경비로 인정되지 않아요. 1세대1주택 비과세와 일시적 2주택은 반영하지 않았어요.</li>
+      <li>취득세는 개인 유상취득 기준이에요. 공시가격 1억 원 이하(정비구역 밖)는 중과에서 빠지고, 85㎡ 초과면 농어촌특별세가 붙어요.</li>
+      <li>재산세는 공정시장가액비율 60%로 추정해 보유 기간만큼 나눴어요. 중개보수는 법정 상한이고 부가세는 별도일 수 있어요.</li>
+      <li>참고용 계산이에요. 실제 신고 전에는 세무사에게 확인받으세요.</li>
+    </ul>
+  </section>
+</div>
+
+<div class="dock" id="dock">
+  <div><span class="lab">세후 순이익 · 매매사업자</span><b id="d-net"></b></div>
+  <div><span class="lab">최대 입찰가</span><b id="d-max"></b></div>
+  <a href="#results" class="btn">결과 보기</a>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="sheetdb.js"></script>
+<script>
+/*CORE-START*/
+const BRACKETS=[[14e6,.06,0],[50e6,.15,1.26e6],[88e6,.24,5.76e6],[150e6,.35,15.44e6],[300e6,.38,19.94e6],[500e6,.40,25.94e6],[1e9,.42,35.94e6],[Infinity,.45,65.94e6]];
+function progressive(t){ if(!(t>0)) return 0; for(const [cap,r,d] of BRACKETS){ if(t<=cap) return t*r-d; } return 0; }
+function marginal(t){ for(const [cap,r] of BRACKETS){ if(t<=cap) return r; } return .45; }
+function brokerageFee(p){
+  if(!(p>0)) return 0;
+  if(p<5e7) return Math.min(p*.006,250000);
+  if(p<2e8) return Math.min(p*.005,800000);
+  if(p<9e8) return p*.004;
+  if(p<12e8) return p*.005;
+  if(p<15e8) return p*.006;
+  return p*.007;
+}
+function propTaxAnnual(pub){
+  if(!(pub>0)) return 0;
+  const t=pub*.6;
+  let tax;
+  if(t<=6e7) tax=t*.001;
+  else if(t<=1.5e8) tax=60000+(t-6e7)*.0015;
+  else if(t<=3e8) tax=195000+(t-1.5e8)*.0025;
+  else tax=570000+(t-3e8)*.004;
+  return Math.round(tax+t*.0014+tax*.2);
+}
+function acqTaxInfo(o){
+  const p=o.bid;
+  const exempt1eok=o.pubPrice>0 && o.pubPrice<=1e8 && !o.redevelop;
+  let heavy=0;
+  if(!exempt1eok){
+    const h=o.houseCount;
+    if(o.adjusted){ if(h>=3) heavy=12; else if(h===2) heavy=8; }
+    else { if(h>=4) heavy=12; else if(h===3) heavy=8; }
+  }
+  let base;
+  if(p<=6e8) base=1; else if(p<=9e8) base=(p/1e8)*(2/3)-3; else base=3;
+  base=Math.round(base*100)/100;
+  const big=o.area>85;
+  let rate,edu,rural;
+  if(heavy){ rate=heavy; edu=.4; rural=big?(heavy===8?.6:1):0; }
+  else { rate=base; edu=Math.round(base*10)/100; rural=big?.2:0; }
+  const total=Math.round((rate+edu+rural)*100)/100;
+  return {rate,edu,rural,total,amount:Math.round(p*total/100),heavy,exempt1eok};
+}
+function compute(s){
+  const n=k=>Number(s[k])||0;
+  const bid=Math.max(0,n('bid')), sell=Math.max(0,n('sellPrice'));
+  const months=Math.max(0,Math.round(n('months')));
+  const houses=Math.max(1,Math.round(n('houseCount')||1));
+  const acq=acqTaxInfo({bid,pubPrice:n('pubPrice'),redevelop:!!s.redevelop,adjusted:!!s.adjusted,houseCount:houses,area:n('area')});
+  const interest=Math.round(n('loan')*n('rate')/100*months/12);
+  const propTax=Math.round(propTaxAnnual(n('pubPrice'))*months/12);
+  const upkeep=Math.round(n('monthly')*months);
+  const brok=Math.floor(brokerageFee(sell));
+  const upfront=bid+acq.amount+n('legal')+n('eviction')+n('mgmt')+n('repairCap')+n('repairRev')+n('other');
+  const carry=interest+propTax+upkeep;
+  const totalCost=upfront+carry+brok;
+  const preTax=sell-totalCost;
+  const cash=upfront-n('loan')+carry;
+  const deposit=Math.round(n('minPrice')*(s.rebid?.2:.1));
+  const cgtHeavy=s.adjusted && houses>=2 ? (houses>=3?30:20) : 0;
+  const short=months<12?.7:months<24?.6:0;
+
+  const cgtExpense=acq.amount+n('legal')+n('repairCap')+brok;
+  const gain=sell-bid-cgtExpense;
+  const years=Math.floor(months/12);
+  const ltRate=(!cgtHeavy && years>=3)?Math.min(.30,.06+.02*(years-3)):0;
+  const ltDed=gain>0?Math.round(gain*ltRate):0;
+  const cgtBase=Math.max(0,gain-ltDed-2500000);
+  let cgtTax,cgtRule;
+  if(cgtHeavy){
+    const h=progressive(cgtBase)+cgtBase*cgtHeavy/100, sh=cgtBase*short;
+    if(sh>h){ cgtTax=sh; cgtRule=`단기세율 ${Math.round(short*100)}%`; } else { cgtTax=h; cgtRule=`중과 · 기본세율 +${cgtHeavy}%p`; }
+  } else if(short){
+    cgtTax=cgtBase*short; cgtRule=`단기세율 ${Math.round(short*100)}% · 보유 ${months<12?'1년':'2년'} 미만`;
+  } else {
+    cgtTax=progressive(cgtBase); cgtRule='기본세율 6~45%'+(ltRate?` · 장기보유공제 ${Math.round(ltRate*100)}%`:'');
+  }
+  cgtTax=Math.round(cgtTax);
+  const cgtLocal=Math.round(cgtTax*.1), cgtTotal=cgtTax+cgtLocal;
+  const netCgt=preTax-cgtTotal;
+
+  const base=Math.max(0,n('base'));
+  const bizProfit=preTax-n('bookkeeping');
+  let bizTax=0, bizRule='이익이 없어 세금 없음';
+  if(bizProfit>0){
+    const inc=progressive(base+bizProfit)-progressive(base);
+    bizTax=inc; bizRule=`종합소득세 · 근로소득과 합산, 한계세율 ${Math.round(marginal(base+bizProfit)*100)}%`;
+    if(cgtHeavy){
+      const chai=Math.max(0,Math.min(gain,base+bizProfit));
+      const cb=Math.max(0,chai-2500000);
+      let ct=progressive(cb)+cb*cgtHeavy/100; if(short) ct=Math.max(ct,cb*short);
+      const alt=ct+progressive(Math.max(0,base+bizProfit-chai))-progressive(base);
+      if(alt>inc){ bizTax=alt; bizRule='비교과세 · 양도세 중과 쪽이 커서 그쪽 적용'; }
+      else bizRule+=' · 비교과세 검토 결과 종합소득세 적용';
+    }
+  }
+  bizTax=Math.max(0,Math.round(bizTax));
+  const bizLocal=Math.round(bizTax*.1), bizTotal=bizTax+bizLocal;
+  const netBiz=bizProfit-bizTotal;
+  return {bid,sell,months,acq,interest,propTax,upkeep,brok,upfront,carry,totalCost,preTax,cash,deposit,cgtHeavy,base,
+    cgt:{expense:cgtExpense,gain,ltDed,ltRate,base:cgtBase,tax:cgtTax,local:cgtLocal,total:cgtTotal,net:netCgt,rule:cgtRule,roi:cash>0?netCgt/cash:0},
+    biz:{profit:bizProfit,tax:bizTax,local:bizLocal,total:bizTotal,net:netBiz,rule:bizRule,roi:cash>0?netBiz/cash:0,bookkeeping:n('bookkeeping')}};
+}
+function breakEvenSell(s){
+  const r=compute({...s,sellPrice:0});
+  const c0=r.upfront+r.carry;
+  let x=c0;
+  for(let i=0;i<10;i++) x=c0+Math.floor(brokerageFee(x));
+  return Math.ceil(x/1000)*1000;
+}
+function maxBid(s,kind,target,which){
+  if(!(Number(s.sellPrice)>0)) return null;
+  const f=b=>{ const r=compute({...s,bid:b}); const m=which==='biz'?r.biz:r.cgt;
+    return kind==='won'?m.net-target:(r.cash>0?m.net/r.cash:-Infinity)-target/100; };
+  let lo=0, hi=Math.max(Number(s.sellPrice)||0,Number(s.appraisal)||0,1e6)*1.5;
+  if(f(lo)<0) return null;
+  if(f(hi)>=0) return Math.floor(hi/1000)*1000;
+  for(let i=0;i<60;i++){ const mid=(lo+hi)/2; if(f(mid)>=0) lo=mid; else hi=mid; }
+  return Math.floor(lo/1000)*1000;
+}
+/*CORE-END*/
+
+(function(){
+  const SECTIONS=[
+    {id:'obj',title:'물건',note:'매각물건명세서·감정평가서 보고 채우기',rows:[
+      {k:'name',label:'물건 이름',type:'text',placeholder:'예: ○○빌라 302호'},
+      {k:'caseNo',label:'사건번호',type:'text',placeholder:'예: 2025타경12345'},
+      {k:'appraisal',label:'감정가',type:'won'},
+      {k:'minPrice',label:'최저매각가격',type:'won',extra:true},
+      {k:'bid',label:'입찰가',type:'won',extra:true,slider:true,strong:true},
+      {k:'rebid',label:'재매각',type:'check',text:'재매각 사건이라 보증금이 최저가의 20%'},
+      {k:'pubPrice',label:'주택 공시가격',type:'won',hint:'1억 원 이하이고 정비구역이 아니면 취득세 중과에서 빠져요'},
+      {k:'area',label:'전용면적',type:'num',unit:'㎡'},
+      {k:'adjusted',label:'조정대상지역',type:'check',text:'조정대상지역에 있음'},
+      {k:'redevelop',label:'정비구역',type:'check',text:'정비구역·사업시행구역에 있음 (토지이용계획 확인)'},
+      {k:'houseCount',label:'세대 주택 수',type:'int',unit:'채',hint:'이 집 포함, 배우자 등 세대원 것까지. 공시가 1억 원 이하 주택은 빼고 세요'}
+    ]},
+    {id:'cost',title:'낙찰 후 비용',rows:[
+      {k:'acqTax',label:'취득세',type:'auto'},
+      {k:'legal',label:'법무사·등기',type:'won',hint:'소유권이전, 임차권 등 말소촉탁, 국민주택채권 할인까지'},
+      {k:'eviction',label:'명도·개문',type:'won',hint:'공실이면 개문·짐 처리 정도'},
+      {k:'mgmt',label:'미납 공용관리비',type:'won',hint:'공용부분 원금만 낙찰자 부담. 전기·수도·가스와 연체료는 아님'},
+      {k:'repairCap',label:'수리 · 자본적 지출',type:'won',hint:'보일러·샷시·배관처럼 집의 가치를 올리는 공사. 양도세에서도 경비 인정'},
+      {k:'repairRev',label:'수리 · 수익적 지출',type:'won',hint:'도배·장판·청소·도색. 매매사업자만 경비 인정'},
+      {k:'other',label:'기타',type:'won',hint:'대리입찰 수수료 등'}
+    ]},
+    {id:'hold',title:'보유',rows:[
+      {k:'months',label:'보유 기간',type:'int',unit:'개월',hint:'잔금 낸 날부터 팔고 잔금 받는 날까지'},
+      {k:'loan',label:'대출금',type:'won',hint:'소액 빌라는 방공제 때문에 거의 안 나와요'},
+      {k:'rate',label:'대출 금리',type:'num',unit:'%'},
+      {k:'monthly',label:'월 유지비',type:'won',hint:'공실 동안 관리비·공과금'},
+      {k:'propTax',label:'재산세',type:'auto'}
+    ]},
+    {id:'sell',title:'매도',rows:[
+      {k:'sellPrice',label:'예상 매도가',type:'won',badge:'가정',strong:true,hint:'최근 1~2년 실거래와 지금 나와 있는 매물로 직접 잡은 값'},
+      {k:'brokerage',label:'중개보수',type:'auto'}
+    ]},
+    {id:'tax',title:'세금',rows:[
+      {k:'base',label:'다른 종합소득 과세표준',type:'won',chips:[['근로소득 없음',0],['연봉 ~7천만',40000000],['연봉 7천만~1.2억',70000000],['연봉 1.2억 이상',120000000]],hint:'매매사업자 이익이 이 위에 더해져 세율이 정해져요. 연말정산 원천징수영수증의 과세표준을 넣으면 정확해요'},
+      {k:'bookkeeping',label:'기장·신고 수수료',type:'won',hint:'매매사업자일 때만 드는 비용 (예정신고·종합소득세 신고)'},
+      {k:'heavy',label:'양도세 중과',type:'auto'}
+    ]}
+  ];
+  const TYPES={};
+  SECTIONS.forEach(s=>s.rows.forEach(r=>{ TYPES[r.k]=r.type; }));
+  TYPES.targetWon='won'; TYPES.targetPct='num';
+  const SAVED_KEYS=Object.keys(TYPES).filter(k=>TYPES[k]!=='auto').concat(['targetMode']);
+
+  const BLANK={name:'',caseNo:'',appraisal:0,minPrice:0,bid:0,rebid:false,pubPrice:0,area:0,adjusted:false,redevelop:false,houseCount:1,
+    legal:600000,eviction:500000,mgmt:500000,repairCap:2000000,repairRev:4000000,other:0,
+    months:6,loan:0,rate:5.5,monthly:30000,sellPrice:0,base:70000000,bookkeeping:500000,
+    targetMode:'won',targetWon:5000000,targetPct:10};
+  const DRAFT_KEY='auction-calc-draft-v1';
+
+  const $=id=>document.getElementById(id);
+  const fmt=n=>Math.round(Number(n)||0).toLocaleString('ko-KR');
+  const won=n=>fmt(n)+'원';
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function kr(v){
+    if(!isFinite(v)) return '—';
+    const neg=v<0; let n=Math.round(Math.abs(v));
+    if(n<10000) return (neg?'-':'')+fmt(n)+'원';
+    let eok=Math.floor(n/1e8), man=Math.round((n-eok*1e8)/1e4);
+    if(man>=10000){ eok+=1; man-=10000; }
+    const parts=[];
+    if(eok) parts.push(eok.toLocaleString('ko-KR')+'억');
+    if(man) parts.push(man.toLocaleString('ko-KR')+'만');
+    return (neg?'-':'')+parts.join(' ')+'원';
+  }
+  const signed=v=>(v>0?'+':'')+kr(v);
+  const pct=(x,d=1)=>isFinite(x)?(x*100).toFixed(d)+'%':'—';
+  function parseWon(str){
+    let s=String(str??'').replace(/[,\s원]/g,'');
+    if(!s) return 0;
+    if(/[억만천]/.test(s)){
+      let v=0, rest=s;
+      const take=(re,mul)=>{ const m=rest.match(re); if(m){ v+=parseFloat(m[1])*mul; rest=rest.replace(m[0],''); } };
+      take(/([\d.]+)억/,1e8); take(/([\d.]+)천만/,1e7); take(/([\d.]+)만/,1e4); take(/([\d.]+)천/,1e3);
+      if(/^[\d.]+$/.test(rest)) v+=parseFloat(rest);
+      return Math.round(v)||0;
+    }
+    const v=parseFloat(s); return isFinite(v)?Math.round(v):0;
+  }
+  const parseNum=str=>{ const v=parseFloat(String(str??'').replace(/[,\s%㎡]/g,'')); return isFinite(v)?v:0; };
+
+  let draft=null;
+  try{ draft=JSON.parse(localStorage.getItem(DRAFT_KEY)||'null'); }catch(e){ draft=null; }
+
+  // 웹사이트 빌라 카드의 🧮 단추로 열렸을 때(10/23): ?case=…&name=…&appraisal=…&min=…&bid=…(예상 낙찰가)&area=…&sell=…(추정 실거래가)
+  //  · 그 사건으로 저장해 둔 계산이 있으면 그걸 불러오고, 없으면 카드 값 + 시트의 기본값(notes/calc-defaults)으로 채운다.
+  //  · 서영 소득 과세표준 같은 개인 기본값은 공개 저장소(이 파일)에 두지 않고 시트에서 읽는다.
+  const Q=new URLSearchParams(location.search), QCASE=Q.get('case')||'';
+  if(QCASE) draft=null;
+  async function applyQuery(){
+    if(!QCASE) return false;
+    const saved=deals.filter(x=>x.caseNo===QCASE).sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))[0];
+    if(saved){ loadDeal(saved); toast('저장해 둔 계산을 불러왔어요'); }
+    else{
+      let def={};
+      try{ if(db){ const s=await db.doc('notes/calc-defaults').get(); if(s.exists) def=s.data()||{}; } }catch(e){}
+      const n=k=>Number(Q.get(k))||0;
+      state={...BLANK,...def,name:Q.get('name')||'',caseNo:QCASE,appraisal:n('appraisal'),minPrice:n('min'),bid:n('bid')||n('min'),area:n('area'),sellPrice:n('sell')};
+      currentId=null; dirty=true; touched=true; writeInputs(); render(); renderDeals(); saveDraft();
+      toast(n('sell')?'빌라 카드 값으로 채웠어요 · 예상 매도가 = 추정 실거래가':'빌라 카드 값으로 채웠어요 · 예상 매도가를 넣어 주세요');
+    }
+    try{ history.replaceState(null,'',location.pathname); }catch(e){}
+    return true;
+  }
+  let state={...BLANK,...((draft&&draft.state)||{})};
+  let currentId=(draft&&draft.currentId)||null;
+  let dirty=!!(draft&&draft.dirty);
+  let touched=false;
+  let db=null, deals=[], dealsReady=false, dbChecked=false, pendingLoad=null;
+
+  function rowHTML(r){
+    const id='f-'+r.k, cls='row'+(r.strong?' strong':'');
+    const hint=r.hint?`<div class="hint">${r.hint}</div>`:'';
+    const badge=r.badge?`<span class="badge">${r.badge}</span>`:'';
+    if(r.type==='check') return `<div class="${cls}"><div class="lab">${r.label}</div><div class="field"><label class="check"><input type="checkbox" id="${id}"> ${r.text}</label>${hint}</div></div>`;
+    if(r.type==='auto') return `<div class="${cls}"><div class="lab">${r.label}</div><div class="field"><output id="o-${r.k}" class="auto"></output><span class="tag">자동</span><div class="hint" id="oh-${r.k}"></div></div></div>`;
+    if(r.type==='text') return `<div class="${cls}"><label class="lab" for="${id}">${r.label}</label><div class="field"><input type="text" class="txt" id="${id}" placeholder="${r.placeholder||''}" autocomplete="off">${hint}</div></div>`;
+    const isWon=r.type==='won';
+    let extra='';
+    if(isWon) extra+=`<span class="kr" id="kr-${r.k}"></span>`;
+    if(r.extra) extra+=`<span class="x" id="x-${r.k}"></span>`;
+    if(r.slider) extra+=`<input type="range" id="s-${r.k}" aria-label="입찰가 조절" step="10000">`;
+    if(r.chips) extra+=`<div class="chips" role="group" aria-label="${r.label} 빠른 선택">${r.chips.map(([t,v])=>`<button type="button" class="chip-btn" data-k="${r.k}" data-v="${v}" aria-pressed="false">${t}</button>`).join('')}</div>`;
+    return `<div class="${cls}"><label class="lab" for="${id}">${r.label}${badge}</label><div class="field"><input type="text" class="num-in${isWon?'':' short'}" id="${id}" inputmode="${r.type==='int'||isWon?'numeric':'decimal'}" autocomplete="off"><span class="unit">${r.unit||'원'}</span>${extra}${hint}</div></div>`;
+  }
+  function buildForm(){
+    $('form').innerHTML=SECTIONS.map(sec=>`<section class="sheet" aria-labelledby="h-${sec.id}"><h2 id="h-${sec.id}"><span>${sec.title}</span>${sec.note?`<small>${sec.note}</small>`:''}</h2><div class="rows">${sec.rows.map(rowHTML).join('')}</div></section>`).join('');
+  }
+  function writeInputs(){
+    for(const k of Object.keys(TYPES)){
+      const el=$('f-'+k); if(!el) continue;
+      const t=TYPES[k];
+      if(t==='check') el.checked=!!state[k];
+      else if(t==='text') el.value=state[k]??'';
+      else if(t==='won') el.value=fmt(state[k]);
+      else el.value=String(state[k]??'');
+    }
+  }
+
+  function acqHint(a){
+    if(a.heavy) return `중과 ${a.heavy}% + 지방교육세 ${a.edu}%${a.rural?` + 농특세 ${a.rural}%`:''} = ${a.total}%`;
+    return `${a.rate}% + 지방교육세 ${a.edu}%${a.rural?` + 농특세 ${a.rural}%`:''} = ${a.total}%`+(a.exempt1eok?' · 공시가 1억 이하라 중과 없음':'');
+  }
+  function setNet(id,v){ const el=$(id); el.textContent=signed(v); el.className='net num'+(v<0?' neg':v>0?' pos':''); }
+
+  function render(){
+    const r=compute(state);
+    $('o-acqTax').textContent=won(r.acq.amount);
+    $('oh-acqTax').textContent=acqHint(r.acq);
+    $('o-propTax').textContent=won(r.propTax);
+    $('oh-propTax').textContent=state.pubPrice>0?`연 ${won(propTaxAnnual(state.pubPrice))} 추정 × ${r.months}개월`:'공시가격을 넣으면 추정해요';
+    $('o-brokerage').textContent=won(r.brok);
+    $('oh-brokerage').textContent='법정 상한 기준이에요. 부가세는 별도일 수 있어요';
+    $('o-heavy').textContent=r.cgtHeavy?`대상 · 기본세율 +${r.cgtHeavy}%p`:'해당 없음';
+    $('oh-heavy').textContent=r.cgtHeavy?'조정대상지역 다주택이라 매매사업자도 비교과세가 적용돼요':'조정대상지역이 아니거나 1주택이라 매매사업자는 기본세율로 계산해요';
+
+    for(const k of Object.keys(TYPES)){ if(TYPES[k]!=='won') continue; const el=$('kr-'+k); if(el) el.textContent=state[k]?kr(state[k]):''; }
+    $('x-minPrice').textContent=state.appraisal>0&&state.minPrice>0?`감정가의 ${pct(state.minPrice/state.appraisal)}`:'';
+    let xb=[];
+    if(state.appraisal>0&&state.bid>0) xb.push(`감정가의 ${pct(state.bid/state.appraisal)}`);
+    if(state.minPrice>0&&state.bid>0){ const d=(state.bid-state.minPrice)/state.minPrice; xb.push(`최저가 ${d>=0?'+':''}${pct(d)}`); }
+    $('x-bid').textContent=xb.join(' · ');
+    const sl=$('s-bid');
+    const smin=Math.floor((state.minPrice||0)/10000)*10000;
+    const smax=Math.max(state.appraisal||0,state.sellPrice||0,(state.minPrice||0)*2,state.bid||0,smin+10000);
+    sl.min=String(smin); sl.max=String(Math.ceil(smax/10000)*10000); sl.value=String(state.bid||0);
+    document.querySelectorAll('.chip-btn').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.v)===Number(state[b.dataset.k]))));
+
+    $('r-bid').textContent=r.bid?won(r.bid):'입찰가를 넣어주세요';
+    $('r-bidpct').textContent=state.appraisal>0&&r.bid>0?`감정가의 ${pct(r.bid/state.appraisal)} · ${kr(r.bid)}`:'';
+    renderResult(r);
+
+    const f=[];
+    if(state.minPrice>0&&state.bid>0&&state.bid<state.minPrice) f.push(['bad','입찰가가 최저가보다 낮으면 무효 입찰이에요']);
+    if(!(state.sellPrice>0)) f.push(['warn','예상 매도가를 넣어야 이익이 계산돼요']);
+    if(!(state.pubPrice>0)) f.push(['warn','공시가격을 넣으면 1억 원 이하 중과 제외를 판단해요']);
+    if(r.acq.exempt1eok) f.push(['good','공시가 1억 원 이하라 취득세 중과가 없어요']);
+    if(r.acq.heavy) f.push(['warn',`취득세 중과 ${r.acq.heavy}%가 적용돼요`]);
+    if(r.cgtHeavy) f.push(['warn','조정대상지역 다주택이라 매매사업자 이점이 줄어들어요']);
+    if(r.biz.profit>20e6) f.push(['warn','사업소득이 연 2천만 원을 넘으면 직장 건강보험료가 추가돼요 (계산에 없음)']);
+    $('flags').innerHTML=f.map(([c,t])=>`<li class="${c}">${t}</li>`).join('');
+
+    renderMax(); renderSens(); renderBreakdown(r); renderHeader();
+    $('d-net').textContent=signed(r.biz.net); $('d-net').className=r.biz.net<0?'neg':'';
+  }
+
+  const minus=v=>v?'−'+kr(v):'0원';
+  function putSigned(id,v,base){ const el=$(id); el.textContent=signed(v); el.className=(base||'')+(v>0?' pos':v<0?' neg':''); }
+  function renderResult(r){
+    const s=state, num=k=>Number(s[k])||0;
+    const ready=r.sell>0&&r.bid>0;
+    const acqLegal=r.acq.amount+num('legal');
+    const fix=num('eviction')+num('mgmt')+num('repairCap')+num('repairRev')+num('other');
+    const holdSell=r.carry+r.brok;
+
+    const main=$('r-main-net');
+    if(ready){
+      $('r-story').textContent=`${kr(r.bid)}에 낙찰받아 ${r.months}개월 뒤 ${kr(r.sell)}에 팔면`;
+      $('r-main-label').textContent='매매사업자로 남는 돈';
+      putSigned('r-main-net',r.biz.net,'hero-num num');
+      $('r-main-sub').textContent=r.cash>0?`넣은 현금 ${kr(r.cash)}의 ${pct(r.biz.roi)} · ${r.months}개월 동안`:'';
+      const diff=r.biz.net-r.cgt.net;
+      $('r-vs').textContent=diff>=0
+        ?`매매사업자 없이 개인 양도세로 팔면 ${signed(r.cgt.net)}이에요. 매매사업자가 ${kr(diff)} 더 남아요.`
+        :`개인 양도세로 팔면 ${signed(r.cgt.net)}이라, 이 조건에서는 개인 양도세가 ${kr(-diff)} 더 남아요.`;
+      $('r-vs').hidden=false;
+    } else {
+      $('r-story').textContent=!(r.bid>0)?'입찰가와 예상 매도가를 넣으면':'예상 매도가를 넣으면';
+      $('r-main-label').textContent='';
+      main.textContent='남는 돈이 여기에 나와요'; main.className='hero-num hero-empty';
+      $('r-main-sub').textContent=''; $('r-vs').hidden=true;
+    }
+
+    $('fl-sell').textContent=kr(r.sell);
+    $('fl-bid').textContent=minus(r.bid);
+    $('fl-acq').textContent=minus(acqLegal);
+    $('fl-fix').textContent=minus(fix);
+    $('fl-hold').textContent=minus(holdSell);
+    putSigned('fl-pre',r.preTax,'');
+    $('tg-pre-biz').textContent=signed(r.preTax); $('tg-pre-cgt').textContent=signed(r.preTax);
+    $('tg-bk').textContent=minus(r.biz.bookkeeping);
+    $('r-biz-tax').textContent=minus(r.biz.total); $('r-cgt-tax').textContent=minus(r.cgt.total);
+    putSigned('r-biz-net',r.biz.net,''); putSigned('r-cgt-net',r.cgt.net,'');
+    $('r-biz-roi').textContent=r.cash>0?pct(r.biz.roi):'—'; $('r-cgt-roi').textContent=r.cash>0?pct(r.cgt.roi):'—';
+    let bizShort;
+    if(!(r.biz.profit>0)) bizShort='이익 없음';
+    else if(r.biz.rule.startsWith('비교과세 · 양도세')) bizShort='비교과세 (중과)';
+    else bizShort=`근로소득과 합산 ${Math.round(marginal(r.base+r.biz.profit)*100)}%`;
+    const cgtShort=r.cgt.rule.startsWith('중과')?`중과 +${r.cgtHeavy}%p`:r.cgt.rule.split(' · ')[0];
+    $('r-biz-rule').textContent=bizShort; $('r-cgt-rule').textContent=cgtShort;
+    $('better-biz').hidden=!(ready&&r.biz.net>r.cgt.net); $('better-cgt').hidden=!(ready&&r.cgt.net>r.biz.net);
+
+    $('bars-title').textContent=r.sell>0?`매도가 ${kr(r.sell)}이 어디로 가나`:'매도가가 어디로 가나';
+    const costAll=acqLegal+fix+holdSell;
+    const rows=[['매매사업자',r.biz.total,costAll+r.biz.bookkeeping,r.biz.net],['개인 양도세',r.cgt.total,costAll,r.cgt.net]];
+    $('bars').innerHTML=ready?rows.map(([name,tax,cost,net])=>{
+      const segs=[['seg-bid',r.bid],['seg-cost',cost],['seg-tax',tax],['seg-net',Math.max(0,net)]].filter(([,v])=>v>0);
+      const tag=net<0?`<b class="neg">손해 ${kr(net)}</b>`:`<b class="pos">남는 돈 ${pct(net/r.sell,0)}</b>`;
+      return `<div><div class="bar-top"><span>${name}</span>${tag}</div><div class="bar" aria-hidden="true">${segs.map(([c,v])=>`<span class="${c}" style="flex-grow:${v}"></span>`).join('')}</div></div>`;
+    }).join(''):'<p class="sub" style="margin:0">입찰가와 예상 매도가를 넣으면 나와요.</p>';
+
+    const dep=num('minPrice')>0?r.deposit:0, loan=num('loan');
+    $('cs-dep').textContent=num('minPrice')>0?kr(dep):'—';
+    $('cs-bal-what').textContent=loan>0?'잔금 (낙찰가 − 보증금 − 대출)':'잔금 (낙찰가 − 보증금)';
+    $('cs-bal').textContent=kr(r.bid-dep-loan);
+    $('cs-acq').textContent=kr(acqLegal);
+    $('cs-fix').textContent=kr(fix);
+    $('cs-hold').textContent=kr(r.carry);
+    $('r-cash').textContent=kr(r.cash);
+
+    const be=breakEvenSell(state);
+    $('r-be').textContent=kr(be);
+    const m=$('r-margin');
+    if(r.sell>0){
+      const gap=r.sell-be;
+      m.textContent=gap>=0?`예상 매도가보다 ${kr(gap)} (${pct(gap/r.sell,0)}) 여유가 있어요.`:`예상 매도가가 이미 손해 구간이에요. ${kr(-gap)} 모자라요.`;
+      m.className=gap>=0?'pos':'neg';
+    } else { m.textContent=''; m.className=''; }
+  }
+
+  let lastMaxBiz=null;
+  function maxSub(m){
+    if(m==null) return [!(state.sellPrice>0)?'예상 매도가를 넣어주세요':'최저가 아래로 내려도 목표에 못 미쳐요',true];
+    const bits=[kr(m)];
+    if(state.appraisal>0) bits.push(`감정가의 ${pct(m/state.appraisal)}`);
+    let bad=false;
+    if(state.minPrice>0){ if(m<state.minPrice){ bits.push('최저가보다 낮아 입찰 불가'); bad=true; } else bits.push(`최저가 +${pct((m-state.minPrice)/state.minPrice)}`); }
+    return [bits.join(' · '),bad];
+  }
+  function renderMax(){
+    const kind=state.targetMode==='pct'?'pct':'won';
+    $('t-won').setAttribute('aria-pressed',String(kind==='won')); $('t-pct').setAttribute('aria-pressed',String(kind==='pct'));
+    $('tw-wrap').hidden=kind!=='won'; $('tp-wrap').hidden=kind!=='pct';
+    const target=kind==='won'?Number(state.targetWon)||0:Number(state.targetPct)||0;
+    const mb=maxBid(state,kind,target,'biz'), mc=maxBid(state,kind,target,'cgt');
+    lastMaxBiz=mb;
+    $('mb-biz').textContent=mb==null?'—':won(mb);
+    $('mb-cgt').textContent=mc==null?'—':won(mc);
+    const [sb,bb]=maxSub(mb), [sc,bc]=maxSub(mc);
+    $('mb-biz-sub').textContent=sb; $('mb-biz-sub').className='sub'+(bb?' bad':'');
+    $('mb-cgt-sub').textContent=sc; $('mb-cgt-sub').className='sub'+(bc?' bad':'');
+    $('apply-max').disabled=mb==null;
+    $('d-max').textContent=mb==null?'—':kr(mb);
+  }
+
+  function renderSens(){
+    const base=state.minPrice>0?state.minPrice:(state.bid>0?state.bid:0);
+    const t=$('sens');
+    if(!(base>0)||!(state.sellPrice>0)){ t.innerHTML='<tbody><tr><td class="empty" style="white-space:normal">최저매각가격과 예상 매도가를 넣으면 입찰가별 손익표가 나와요.</td></tr></tbody>'; return; }
+    const mults=[1,1.05,1.1,1.15,1.2,1.25,1.3,1.4,1.5];
+    let bids=mults.map((m,i)=>i===0?base:Math.round(base*m/10000)*10000);
+    if(state.bid>0) bids.push(state.bid);
+    bids=[...new Set(bids)].sort((a,b)=>a-b);
+    const head='<thead><tr><th>입찰가</th><th>감정가 대비</th><th>들어가는 현금</th><th>세후 순이익 · 사업자</th><th>수익률 · 사업자</th><th>세후 순이익 · 양도세</th></tr></thead>';
+    const body=bids.map(b=>{
+      const r=compute({...state,bid:b});
+      const cls=v=>v<0?'n neg':v>0?'n pos':'n';
+      return `<tr class="${b===state.bid?'cur':''}"><td class="n">${kr(b)}</td><td class="n">${state.appraisal>0?pct(b/state.appraisal):'—'}</td><td class="n">${kr(r.cash)}</td><td class="${cls(r.biz.net)}">${signed(r.biz.net)}</td><td class="n">${r.cash>0?pct(r.biz.roi):'—'}</td><td class="${cls(r.cgt.net)}">${signed(r.cgt.net)}</td></tr>`;
+    }).join('');
+    t.innerHTML=head+'<tbody>'+body+'</tbody>';
+  }
+
+  function dl(rows){ return '<dl>'+rows.map(([k,v,tot])=>`<dt${tot?' class="tot"':''}>${k}</dt><dd${tot?' class="tot"':''}>${v}</dd>`).join('')+'</dl>'; }
+  function renderBreakdown(r){
+    const a=r.acq, s=state;
+    const common=dl([
+      ['낙찰가',won(r.bid)],
+      [`취득세 (${a.total}%)`,won(a.amount)],
+      ['법무사·등기',won(s.legal)],
+      ['명도·개문',won(s.eviction)],
+      ['미납 공용관리비',won(s.mgmt)],
+      ['수리 · 자본적 지출',won(s.repairCap)],
+      ['수리 · 수익적 지출',won(s.repairRev)],
+      ['기타',won(s.other)],
+      [`대출이자 (${r.months}개월)`,won(r.interest)],
+      ['재산세',won(r.propTax)],
+      [`월 유지비 × ${r.months}개월`,won(r.upkeep)],
+      ['중개보수',won(r.brok)],
+      ['총비용',won(r.totalCost),true],
+      ['예상 매도가',won(r.sell)],
+      ['세전 이익',(r.preTax>0?'+':'')+won(r.preTax),true]
+    ]);
+    const biz=dl([
+      ['세전 이익',won(r.preTax)],
+      ['기장·신고 수수료',`-${won(r.biz.bookkeeping)}`],
+      ['사업소득',won(r.biz.profit),true],
+      ['다른 종합소득 과세표준',won(r.base)],
+      ['늘어나는 종합소득세',won(r.biz.tax)],
+      ['지방소득세 10%',won(r.biz.local)],
+      ['세금 합계',won(r.biz.total),true],
+      ['세후 순이익',(r.biz.net>0?'+':'')+won(r.biz.net),true]
+    ]);
+    const cgt=dl([
+      ['양도가액',won(r.sell)],
+      ['취득가액 (낙찰가)',`-${won(r.bid)}`],
+      ['인정 경비',`-${won(r.cgt.expense)}`],
+      ['양도차익',won(r.cgt.gain),true],
+      ['장기보유특별공제',`-${won(r.cgt.ltDed)}`],
+      ['기본공제',`-${won(r.cgt.gain>0?Math.min(2500000,Math.max(0,r.cgt.gain-r.cgt.ltDed)):0)}`],
+      ['과세표준',won(r.cgt.base),true],
+      ['양도소득세',won(r.cgt.tax)],
+      ['지방소득세 10%',won(r.cgt.local)],
+      ['세금 합계',won(r.cgt.total),true],
+      ['세후 순이익',(r.cgt.net>0?'+':'')+won(r.cgt.net),true]
+    ]);
+    $('breakdown').innerHTML=`<div class="bd"><h3>낙찰부터 매도까지</h3>${common}</div><div class="bd"><h3>매매사업자 · ${esc(r.biz.rule.split(' · ')[0])}</h3>${biz}</div><div class="bd"><h3>개인 양도세 · ${esc(r.cgt.rule)}</h3>${cgt}<p class="sub" style="margin:8px 0 0">인정 경비는 취득세·법무사·자본적 지출·중개보수예요. 나머지 비용은 실제로 나가지만 세금 계산에서는 빠져요.</p></div>`;
+  }
+
+  function renderHeader(){
+    $('cur-name').textContent=state.name||'이름 없는 물건';
+    $('cur-case').textContent=state.caseNo||'';
+    const p=$('cur-status');
+    if(!dbChecked){ p.textContent='불러오는 중'; p.className='pill'; }
+    else if(!db){ p.textContent='저장 안 됨 · 이 브라우저에만 남아요'; p.className='pill'; }
+    else if(currentId&&!dirty){ p.textContent='저장됨'; p.className='pill saved'; }
+    else if(currentId){ p.textContent='바뀐 내용 저장 전'; p.className='pill dirty'; }
+    else { p.textContent='아직 저장 안 함'; p.className='pill dirty'; }
+  }
+
+  function fmtDate(iso){ const d=new Date(iso); if(isNaN(d)) return ''; const z=n=>String(n).padStart(2,'0'); return `${d.getMonth()+1}/${d.getDate()} ${z(d.getHours())}:${z(d.getMinutes())}`; }
+  function renderDeals(){
+    const host=$('deals-body');
+    if(dbChecked&&!db){ host.innerHTML='<p class="empty">저장소(구글 시트)에 연결하지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요. 지금 입력한 값은 이 브라우저에만 남아요.</p>'; $('deals-count').textContent=''; return; }
+    if(!dealsReady){ host.innerHTML='<p class="empty">저장한 물건을 불러오는 중이에요.</p>'; return; }
+    $('deals-count').textContent=deals.length?`${deals.length}건 · 눌러서 불러오기`:'';
+    if(!deals.length){ host.innerHTML='<p class="empty">저장한 물건이 여기에 나란히 나와요. 오른쪽 위 ‘저장’을 누르면 추가돼요.</p>'; return; }
+    const rows=deals.map(d=>{
+      const inp={...BLANK,...(d.inputs||{})};
+      const r=compute(inp);
+      const cls=v=>v<0?'n neg':v>0?'n pos':'n';
+      const isCur=d.id===currentId;
+      return `<tr class="clickable${isCur?' cur':''}" data-load="${esc(d.id)}"><td><button type="button" class="name-btn" data-act="load" data-id="${esc(d.id)}">${esc(d.name||'이름 없는 물건')}</button><span class="small">${esc(d.caseNo||'')}${isCur?' · 지금 보는 중':''}</span></td><td class="n">${kr(r.bid)}</td><td class="n">${kr(r.sell)}</td><td class="n">${kr(r.cash)}</td><td class="${cls(r.biz.net)}">${signed(r.biz.net)}</td><td class="n">${r.cash>0?pct(r.biz.roi):'—'}</td><td class="${cls(r.cgt.net)}">${signed(r.cgt.net)}</td><td class="n">${fmtDate(d.updatedAt)}</td><td><div class="deal-actions"><button type="button" class="link-btn" data-act="load" data-id="${esc(d.id)}">불러오기</button><button type="button" class="link-btn danger" data-act="del" data-id="${esc(d.id)}">삭제</button></div></td></tr>`;
+    }).join('');
+    const p=pendingLoad&&deals.find(x=>x.id===pendingLoad);
+    const strip=p?`<div class="confirm-strip" role="alert"><span>저장하지 않은 변경이 있어요. ‘${esc(p.name||'이름 없는 물건')}’을(를) 불러오면 지금 입력이 사라져요.</span><span class="deal-actions"><button type="button" class="link-btn" data-act="save-load">저장하고 불러오기</button><button type="button" class="link-btn" data-act="confirm-load">저장 안 하고 불러오기</button><button type="button" class="link-btn" data-act="cancel-load">취소</button></span></div>`:'';
+    host.innerHTML=strip+`<div class="table-wrap"><table><thead><tr><th>물건</th><th>입찰가</th><th>매도가</th><th>들어가는 현금</th><th>세후 · 사업자</th><th>수익률</th><th>세후 · 양도세</th><th>저장</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+
+  let toastTimer=null;
+  function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2600); }
+  let draftTimer=null;
+  function saveDraft(){ clearTimeout(draftTimer); draftTimer=setTimeout(()=>{ try{ localStorage.setItem(DRAFT_KEY,JSON.stringify({state,currentId,dirty})); }catch(e){} },300); }
+  function changed(){ dirty=true; touched=true; render(); saveDraft(); }
+
+  function snapshotState(){ const o={}; for(const k of SAVED_KEYS) o[k]=state[k]; return o; }
+  function errMsg(e){
+    const c=e&&e.code;
+    if(c==='quota_exceeded') return '저장 공간이 가득 찼어요. 안 쓰는 물건을 지운 뒤 다시 저장해주세요.';
+    if(c==='invalid_argument') return '이 계정 권한으로는 저장할 수 없어요.';
+    if(c==='revoked'||c==='not_granted'||c==='capability_disabled') return '저장 권한이 없어졌어요. 페이지를 다시 열어주세요.';
+    return '저장하지 못했어요. 잠시 뒤 다시 눌러주세요.';
+  }
+  let busy=false;
+  function setBusy(b){ busy=b; $('btn-save').disabled=b||!db; $('btn-save-new').disabled=b||!db; }
+  async function save(asNew){
+    if(!db||busy) return;
+    const body={name:state.name||'이름 없는 물건',caseNo:state.caseNo||'',inputs:snapshotState(),updatedAt:new Date().toISOString()};
+    setBusy(true);
+    try{
+      if(currentId&&!asNew){ await db.collection('deals').doc(currentId).set(body); }
+      else { const ref=db.collection('deals').doc(); await ref.set(body); currentId=ref.id; }
+      dirty=false; saveDraft(); renderHeader(); renderDeals();
+      toast(asNew||!currentId?'새 물건으로 저장했어요':'저장했어요');
+    }catch(e){ toast(errMsg(e)); }
+    finally{ setBusy(false); }
+  }
+  function loadDeal(d,scroll){
+    state={...BLANK,...(d.inputs||{})}; currentId=d.id; dirty=false; pendingLoad=null;
+    writeInputs(); render(); renderDeals(); saveDraft();
+    if(scroll){
+      let reduce=false; try{ reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
+      window.scrollTo({top:0,behavior:reduce?'auto':'smooth'});
+      toast(`‘${d.name||'이름 없는 물건'}’ 불러왔어요`);
+    }
+  }
+  function requestLoad(id){
+    const d=deals.find(x=>x.id===id); if(!d) return;
+    if(dirty){ pendingLoad=id; renderDeals(); return; }
+    loadDeal(d,true);
+  }
+  function arm(btn,label,cls,fn){
+    if(btn.dataset.armed==='1'){ fn(); return; }
+    btn.dataset.armed='1'; const old=btn.textContent; btn.textContent=label; btn.classList.add(cls);
+    setTimeout(()=>{ if(btn.isConnected){ btn.dataset.armed=''; btn.textContent=old; btn.classList.remove(cls); } },3500);
+  }
+
+  async function initDb(){
+    let ns=null;
+    try{ ns=await SheetDB.use(); }catch(e){ ns=null; }
+    dbChecked=true;
+    if(!ns){ $('save-msg').textContent='저장소(구글 시트)에 연결하지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.'; renderHeader(); renderDeals(); applyQuery(); return; }
+    db=ns; setBusy(false);
+    $('save-msg').textContent='‘저장’은 지금 물건을 덮어쓰고, ‘새 물건으로 저장’은 따로 하나 더 만들어요.';
+    renderHeader(); renderDeals();
+    let first=true;
+    db.collection('deals').onSnapshot(snap=>{
+      deals=snap.docs.filter(d=>d.exists).map(d=>({id:d.id,...(d.data()||{})}));
+      deals.sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')));
+      dealsReady=true;
+      if(!snap.metadata.fromCache){
+        if(currentId&&!deals.some(d=>d.id===currentId)){ currentId=null; dirty=true; }
+        if(first&&QCASE){ first=false; applyQuery(); return; }
+        if(first&&!draft&&!touched&&deals.length){ first=false; loadDeal(deals[0]); return; }
+        first=false;
+      }
+      renderDeals(); renderHeader();
+    },()=>{ $('deals-body').innerHTML='<p class="empty">저장 목록을 불러오지 못했어요. 페이지를 다시 열어주세요.</p>'; });
+  }
+
+  buildForm(); writeInputs(); render(); renderDeals();
+
+  document.addEventListener('input',e=>{
+    const t=e.target; if(!t||!t.id) return;
+    if(t.id==='s-bid'){ state.bid=Number(t.value)||0; $('f-bid').value=fmt(state.bid); changed(); return; }
+    if(!t.id.startsWith('f-')) return;
+    const k=t.id.slice(2), ty=TYPES[k]; if(!ty) return;
+    if(ty==='check') state[k]=t.checked;
+    else if(ty==='text') state[k]=t.value;
+    else if(ty==='won') state[k]=parseWon(t.value);
+    else if(ty==='int') state[k]=Math.round(parseNum(t.value));
+    else state[k]=parseNum(t.value);
+    changed();
+  });
+  document.addEventListener('change',e=>{
+    const t=e.target; if(t&&t.type==='checkbox'&&t.id.startsWith('f-')){ const k=t.id.slice(2); if(state[k]!==t.checked){ state[k]=t.checked; changed(); } }
+  });
+  document.addEventListener('focusout',e=>{
+    const t=e.target; if(t&&t.id&&t.id.startsWith('f-')&&TYPES[t.id.slice(2)]==='won') t.value=fmt(state[t.id.slice(2)]);
+  });
+  document.addEventListener('click',e=>{
+    const chip=e.target.closest('.chip-btn');
+    if(chip){ state[chip.dataset.k]=Number(chip.dataset.v); $('f-'+chip.dataset.k).value=fmt(state[chip.dataset.k]); changed(); return; }
+    const act=e.target.closest('[data-act]');
+    if(act){
+      const a=act.dataset.act;
+      if(a==='confirm-load'){ const d=deals.find(x=>x.id===pendingLoad); if(d) loadDeal(d,true); return; }
+      if(a==='cancel-load'){ pendingLoad=null; renderDeals(); return; }
+      if(a==='save-load'){ const id=pendingLoad; (async()=>{ await save(false); const d=deals.find(x=>x.id===id); if(d&&!dirty) loadDeal(d,true); })(); return; }
+      const d=deals.find(x=>x.id===act.dataset.id); if(!d) return;
+      if(a==='load'){
+        requestLoad(d.id);
+      } else if(a==='del'){
+        arm(act,'삭제 확인','armed',async()=>{
+          try{ await db.collection('deals').doc(d.id).delete(); if(d.id===currentId){ currentId=null; dirty=true; renderHeader(); } toast('삭제했어요'); }
+          catch(err){ toast('삭제하지 못했어요. 잠시 뒤 다시 눌러주세요.'); }
+        });
+      }
+      return;
+    }
+    const tr=e.target.closest('tr[data-load]');
+    if(tr) requestLoad(tr.dataset.load);
+  });
+  $('t-won').addEventListener('click',()=>{ state.targetMode='won'; changed(); });
+  $('t-pct').addEventListener('click',()=>{ state.targetMode='pct'; changed(); });
+  $('apply-max').addEventListener('click',()=>{ if(lastMaxBiz==null) return; state.bid=lastMaxBiz; $('f-bid').value=fmt(state.bid); changed(); toast('입찰가에 넣었어요'); });
+  $('btn-save').addEventListener('click',()=>save(false));
+  $('btn-save-new').addEventListener('click',()=>save(true));
+  $('btn-new').addEventListener('click',e=>{
+    const go=()=>{ state={...BLANK,base:state.base,bookkeeping:state.bookkeeping}; currentId=null; dirty=false; touched=true; writeInputs(); render(); renderDeals(); saveDraft(); toast('빈 양식을 열었어요'); };
+    if(dirty) arm(e.currentTarget,'저장 안 한 내용 버리기','armed-load',go); else go();
+  });
+
+  initDb();
+})();
+</script>
+
+</body></html>

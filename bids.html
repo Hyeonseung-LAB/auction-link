@@ -1,0 +1,277 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><title>우리 입찰 기록</title><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%93%9D</text></svg>"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body><style>.snav{display:flex;gap:6px;overflow-x:auto;padding:12px 16px 0;max-width:1240px;margin:0 auto;scrollbar-width:none}.snav::-webkit-scrollbar{display:none}.snav a{flex:0 0 auto;padding:7px 13px;border-radius:999px;font:600 13px/1.2 'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;text-decoration:none;color:#566275;background:#fff;border:1.5px solid #d2d8e1;white-space:nowrap}.snav a.on{background:#16202e;color:#fff;border-color:#16202e;box-shadow:inset 0 0 0 200px #16202e}@media (prefers-color-scheme:dark){.snav a{background:#161d27;color:#97a3b4;border-color:#2a3443}.snav a.on{background:#e3e8ef;color:#0e131a;border-color:#e3e8ef;box-shadow:inset 0 0 0 200px #e3e8ef}}</style><nav class="snav" aria-label="빌라 경매 사이트"><a href="villa.html">🏡 빌라 매물</a><a href="villa_results.html">🔨 매각 결과</a><a href="calendar.html">📅 캘린더</a><a href="calc.html">🧮 계산기</a><a href="bids.html" class="on" aria-current="page">📝 입찰기록</a></nav>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* 레이아웃: 한 줄 요약 띠 → 기록 카드 목록(최근 기일부터). 카드 한 장 = 입찰표 한 장 — 우리 금액과 낙찰가를 나란히 */
+:root{
+  --bg:#f3f6f8; --card:#ffffff; --ink:#1a2430; --muted:#5f6c7a; --faint:#9aa6b2; --line:#dde4ea;
+  --accent:#0f6e73;                 /* 바다 초록 — 버튼·강조 */
+  --win:#0f8a5f; --lose:#8a96a3; --wait:#2f6fd1; --void:#b07a1a;
+  --hs:#2f9e5a; --sy:#d6589a;       /* 현승 초록 · 서영 핑크 */
+  --soft:#eaf1f3; --danger:#c8383f;
+  --f-body:'IBM Plex Sans KR',-apple-system,'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;
+  --f-num:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11171d; --card:#18212a; --ink:#e6edf3; --muted:#9fb0c0; --faint:#6f7f8f; --line:#27323d;
+  --accent:#4fb8bd; --win:#3cc48d; --lose:#7d8a97; --wait:#6ea0f0; --void:#d9a54a;
+  --hs:#5cc985; --sy:#f07fb8; --soft:#1e2a33; --danger:#ef6b72; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11171d; --card:#18212a; --ink:#e6edf3; --muted:#9fb0c0; --faint:#6f7f8f; --line:#27323d;
+  --accent:#4fb8bd; --win:#3cc48d; --lose:#7d8a97; --wait:#6ea0f0; --void:#d9a54a;
+  --hs:#5cc985; --sy:#f07fb8; --soft:#1e2a33; --danger:#ef6b72; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:20px 48px;display:flex;flex-direction:column;gap:16px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-size:22px;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--muted);font-size:13px;margin-top:2px}
+button{font:inherit;cursor:pointer}
+.btn{border:0;border-radius:10px;padding:9px 14px;font-weight:600;background:var(--accent);color:#fff}
+.btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--line)}
+.btn.danger{background:var(--danger)}
+.btn:focus-visible,.chip:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+
+/* 요약 띠 */
+.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.summary div{background:var(--card);padding:10px 12px;min-width:0}
+.summary .k{font-size:11.5px;color:var(--muted);letter-spacing:.02em}
+.summary .v{font-size:19px;font-weight:700}
+.insight{background:var(--soft);border-radius:12px;padding:10px 14px;font-size:13.5px;color:var(--ink)}
+.insight b{font-weight:700}
+
+/* 기록 카드 */
+.list{display:flex;flex-direction:column;gap:10px}
+.bid{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.date{font-family:var(--f-num);font-size:13px;color:var(--muted)}
+.pill{font-size:12px;font-weight:700;border-radius:999px;padding:2px 10px;color:#fff;box-shadow:inset 0 0 0 200px var(--pc);background:var(--pc)}
+.who{font-size:12px;font-weight:600;border-radius:999px;padding:1px 9px;border:1.5px solid var(--wc);color:var(--wc)}
+.kind{font-size:12px;color:var(--muted)}
+.ttl{font-weight:700;font-size:16px;word-break:keep-all;min-width:0}
+.case{font-size:12.5px;color:var(--muted);margin-top:2px}
+.nums{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.nums div{min-width:0}
+.nums .k{font-size:11.5px;color:var(--muted)}
+.nums .v{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nums .r{font-size:11.5px;color:var(--faint)}
+.nums .ours .v{color:var(--accent)}
+.gap{font-size:13px;color:var(--muted)}
+.gap b{color:var(--ink)}
+.note{font-size:13px;color:var(--muted);white-space:pre-wrap;word-break:keep-all}
+.acts{display:flex;gap:8px;justify-content:flex-end}
+.acts button{background:transparent;border:0;color:var(--muted);font-size:13px;padding:4px 6px}
+.acts button:hover{color:var(--accent)}
+.confirm{display:flex;gap:8px;align-items:center;justify-content:flex-end;font-size:13px;color:var(--danger)}
+
+/* 입력 */
+.form{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px}
+.form h2{grid-column:1/-1;font-size:16px;margin:0}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted);min-width:0}
+.form .full{grid-column:1/-1}
+input,select,textarea{font:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:9px;padding:8px 10px;width:100%;min-width:0}
+textarea{min-height:60px;resize:vertical}
+.hint{font-size:11.5px;color:var(--faint);min-height:1em}
+.form .row{grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.msg{font-size:13px;color:var(--danger)}
+.empty{background:var(--card);border:1px dashed var(--line);border-radius:14px;padding:22px;text-align:center;color:var(--muted)}
+.foot{font-size:12px;color:var(--faint)}
+@media (max-width:520px){
+  .summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .nums{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .form{grid-template-columns:minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:no-preference){.bid{transition:border-color .15s}.bid:hover{border-color:var(--faint)}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>우리 입찰 기록</h1>
+      <div class="sub">현승·서영이 넣은 입찰과 그 결과 — 우리 금액과 실제 낙찰가를 나란히</div>
+    </div>
+    <button class="btn" id="addBtn" type="button">＋ 입찰 기록 추가</button>
+  </header>
+
+  <section class="summary" id="summary" aria-label="요약">
+    <div><div class="k">입찰</div><div class="v num" id="sN">–</div></div>
+    <div><div class="k">낙찰</div><div class="v num" id="sW">–</div></div>
+    <div><div class="k">패찰</div><div class="v num" id="sL">–</div></div>
+    <div><div class="k">결과 대기</div><div class="v num" id="sP">–</div></div>
+  </section>
+  <div class="insight" id="insight" hidden></div>
+
+  <form class="form" id="form" hidden novalidate>
+    <h2 id="formTitle">입찰 기록 추가</h2>
+    <label>매각기일<input type="date" id="f_date" required></label>
+    <label>법원<input id="f_court" list="courts" placeholder="인천지방법원"></label>
+    <label>사건번호<input id="f_case" placeholder="2025타경514257"></label>
+    <label>종류<select id="f_kind"><option>빌라</option><option>아파트</option><option>오피스텔</option><option>기타</option></select></label>
+    <label class="full">물건<input id="f_title" placeholder="계양구 임학동 삼성하이츠맨션 602동 302호"></label>
+    <label>입찰 명의<select id="f_who"><option>서영</option><option>현승</option><option>공동</option></select></label>
+    <label>방식<select id="f_method"><option>대리</option><option>직접</option></select></label>
+    <label>감정가(원)<input id="f_appraisal" inputmode="numeric" placeholder="110000000"><span class="hint" data-for="f_appraisal"></span></label>
+    <label>최저가(원)<input id="f_min" inputmode="numeric" placeholder="37730000"><span class="hint" data-for="f_min"></span></label>
+    <label>우리 입찰가(원)<input id="f_bid" inputmode="numeric" placeholder="42200624"><span class="hint" data-for="f_bid"></span></label>
+    <label>결과<select id="f_result"><option>대기</option><option>낙찰</option><option>패찰</option><option>유찰</option><option>변경·취하</option><option>기타</option></select></label>
+    <label>낙찰가(원)<input id="f_sale" inputmode="numeric" placeholder="결과가 나오면"><span class="hint" data-for="f_sale"></span></label>
+    <label>차순위(원)<input id="f_second" inputmode="numeric" placeholder="있으면"><span class="hint" data-for="f_second"></span></label>
+    <label>응찰자 수<input id="f_bidders" inputmode="numeric" placeholder="7"></label>
+    <label class="full">메모<textarea id="f_note" placeholder="이 물건을 고른 이유, 입찰가 정한 근거 등"></textarea></label>
+    <div class="row"><span class="msg" id="formMsg"></span>
+      <button class="btn ghost" type="button" id="cancelBtn">취소</button>
+      <button class="btn" type="submit" id="saveBtn">저장</button></div>
+  </form>
+  <datalist id="courts"><option>서울중앙지방법원</option><option>서울동부지방법원</option><option>서울서부지방법원</option><option>서울남부지방법원</option><option>서울북부지방법원</option><option>인천지방법원</option><option>인천지방법원 부천지원</option><option>의정부지방법원 고양지원</option><option>수원지방법원</option><option>수원지방법원 성남지원</option></datalist>
+
+  <section class="list" id="list" aria-live="polite">
+    <div class="empty" id="empty">기록을 불러오는 중이에요…</div>
+  </section>
+  <div class="foot">금액은 원 단위로 넣으면 돼요. 낙찰가·차순위·응찰자 수는 결과가 나온 뒤 ‘수정’으로 채우거나, Claude에게 “결과 채워 줘”라고 하면 대신 넣어 드려요.</div>
+</div>
+
+<script src="sheetdb.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const MONEY = ["f_appraisal","f_min","f_bid","f_sale","f_second"];
+const RESULT_COLOR = {"낙찰":"var(--win)","패찰":"var(--lose)","대기":"var(--wait)","유찰":"var(--void)","변경·취하":"var(--void)","기타":"var(--lose)"};
+const WHO_COLOR = {"현승":"var(--hs)","서영":"var(--sy)","공동":"var(--accent)"};
+let col = null, rows = [], canWrite = true, editing = null, confirmId = null;
+
+function man(n){            // 42200624 → '4,220만 624원'
+  if(!n && n!==0) return "";
+  const eok=Math.floor(n/1e8), m=Math.floor((n%1e8)/1e4), w=Math.round(n%1e4);
+  return (eok?eok+"억 ":"")+(m?m.toLocaleString()+"만":"")+(w?" "+w.toLocaleString()+"원":(eok||m?"":"0원"));
+}
+function short(n){ if(!n) return "–"; const eok=Math.floor(n/1e8), m=Math.round((n%1e8)/1e4);
+  return (eok?eok+"억":"")+(m?m.toLocaleString()+"만":(eok?"":"0")); }
+function pct(a,b){ return a&&b ? Math.round(a/b*100) : null; }
+function num(v){ const s=String(v||"").replace(/[^\d]/g,""); return s?Number(s):null; }
+function el(tag, cls, text){ const e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e; }
+
+function render(){
+  const list=$("list"); list.replaceChildren();
+  const done=rows.filter(r=>r.result==="낙찰"||r.result==="패찰");
+  $("sN").textContent=rows.length; $("sW").textContent=rows.filter(r=>r.result==="낙찰").length;
+  $("sL").textContent=rows.filter(r=>r.result==="패찰").length; $("sP").textContent=rows.filter(r=>r.result==="대기").length;
+  // 우리 입찰가율 vs 실제 낙찰가율(최저가 대비) — 결과 나온 것만
+  const both=done.filter(r=>r.min&&r.bid&&r.sale);
+  const ins=$("insight");
+  if(both.length){
+    const ourAvg=Math.round(both.reduce((s,r)=>s+r.bid/r.min,0)/both.length*100);
+    const saleAvg=Math.round(both.reduce((s,r)=>s+r.sale/r.min,0)/both.length*100);
+    ins.replaceChildren();
+    ins.append("결과 나온 "+both.length+"건 평균 — 우리 입찰가는 최저가의 ", el("b",null,ourAvg+"%"),
+      ", 실제 낙찰가는 ", el("b",null,saleAvg+"%"), " (차이 "+(ourAvg-saleAvg>0?"+":"")+(ourAvg-saleAvg)+"%p)");
+    ins.hidden=false;
+  } else ins.hidden=true;
+  if(!rows.length){
+    const e=el("div","empty"); e.id="empty";
+    e.textContent=col ? "아직 기록이 없어요. ‘＋ 입찰 기록 추가’로 첫 입찰을 넣어 보세요."
+                      : "저장소(구글 시트)에 연결하지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.";
+    list.append(e); return;
+  }
+  for(const r of rows){
+    const card=el("article","bid");
+    const top=el("div","top");
+    top.append(el("span","date",(r.date||"").replace(/-/g,".")));
+    const p=el("span","pill",r.result||"대기"); p.style.setProperty("--pc",RESULT_COLOR[r.result]||"var(--wait)"); top.append(p);
+    if(r.who){ const w=el("span","who",r.who); w.style.setProperty("--wc",WHO_COLOR[r.who]||"var(--accent)"); top.append(w); }
+    top.append(el("span","kind",[r.kind,r.method?r.method+" 입찰":""].filter(Boolean).join(" · ")));
+    card.append(top);
+    const head=el("div"); head.append(el("div","ttl",r.title||"(물건 이름 없음)"));
+    head.append(el("div","case",[r.case,r.court].filter(Boolean).join(" · ")));
+    card.append(head);
+    const nums=el("div","nums");
+    const cell=(k,v,sub,cls)=>{ const d=el("div",cls||""); d.append(el("div","k",k), el("div","v num",v)); if(sub) d.append(el("div","r",sub)); nums.append(d); };
+    cell("우리 입찰가", short(r.bid), pct(r.bid,r.min)!=null?"최저가의 "+pct(r.bid,r.min)+"%":"", "ours");
+    cell("낙찰가", short(r.sale), pct(r.sale,r.min)!=null?"최저가의 "+pct(r.sale,r.min)+"%":(r.result==="대기"?"결과 대기":""));
+    cell("차순위", short(r.second), r.second&&r.min?"최저가의 "+pct(r.second,r.min)+"%":"");
+    cell("최저가 · 응찰", short(r.min), r.bidders?r.bidders+"명 응찰":(r.appraisal?"감정가 "+short(r.appraisal):""));
+    card.append(nums);
+    if(r.sale&&r.bid&&r.result!=="낙찰"){
+      const g=el("div","gap"), d=r.sale-r.bid;
+      g.append("낙찰가보다 ", el("b",null,short(Math.abs(d))+(d>0?" 낮게":" 높게")), " 썼어요"
+        +(r.min?" ("+(pct(r.bid,r.min)-pct(r.sale,r.min))+"%p)":"")
+        +(r.second&&r.bid<r.second?" · 차순위보다도 "+short(r.second-r.bid)+" 낮음":""));
+      card.append(g);
+    }
+    if(r.note) card.append(el("div","note",r.note));
+    if(canWrite){
+      if(confirmId===r.id){
+        const c=el("div","confirm"); c.append("이 기록을 지울까요?");
+        const no=el("button","btn ghost","취소"); no.type="button"; no.onclick=()=>{confirmId=null;render();};
+        const yes=el("button","btn danger","지우기"); yes.type="button"; yes.onclick=()=>remove(r.id);
+        c.append(no,yes); card.append(c);
+      } else {
+        const a=el("div","acts");
+        const eb=el("button",null,"수정"); eb.type="button"; eb.onclick=()=>openForm(r);
+        const db=el("button",null,"삭제"); db.type="button"; db.onclick=()=>{confirmId=r.id;render();};
+        a.append(eb,db); card.append(a);
+      }
+    }
+    list.append(card);
+  }
+}
+
+function openForm(r){
+  editing=r?r.id:null; $("formTitle").textContent=r?"입찰 기록 수정":"입찰 기록 추가"; $("formMsg").textContent="";
+  const v=r||{date:new Date().toISOString().slice(0,10),kind:"빌라",who:"서영",method:"대리",result:"대기"};
+  $("f_date").value=v.date||""; $("f_court").value=v.court||""; $("f_case").value=v.case||""; $("f_kind").value=v.kind||"빌라";
+  $("f_title").value=v.title||""; $("f_who").value=v.who||"서영"; $("f_method").value=v.method||"대리"; $("f_result").value=v.result||"대기";
+  $("f_appraisal").value=v.appraisal||""; $("f_min").value=v.min||""; $("f_bid").value=v.bid||"";
+  $("f_sale").value=v.sale||""; $("f_second").value=v.second||""; $("f_bidders").value=v.bidders||""; $("f_note").value=v.note||"";
+  MONEY.forEach(hint); $("form").hidden=false; $("f_case").focus();
+}
+function hint(id){ const h=document.querySelector('.hint[data-for="'+id+'"]'); if(!h) return;
+  const n=num($(id).value), m=num($("f_min").value);
+  h.textContent=n?man(n)+(m&&id!=="f_min"&&id!=="f_appraisal"?" · 최저가의 "+pct(n,m)+"%":""):""; }
+MONEY.forEach(id=>$(id).addEventListener("input",()=>{ MONEY.forEach(hint); }));
+
+$("addBtn").onclick=()=>openForm(null);
+$("cancelBtn").onclick=()=>{ $("form").hidden=true; editing=null; };
+$("form").addEventListener("submit", async e=>{
+  e.preventDefault();
+  if(!col){ $("formMsg").textContent="저장소(구글 시트)에 연결하지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요."; return; }
+  const doc={date:$("f_date").value, court:$("f_court").value.trim(), case:$("f_case").value.trim(), kind:$("f_kind").value,
+    title:$("f_title").value.trim(), who:$("f_who").value, method:$("f_method").value, result:$("f_result").value,
+    appraisal:num($("f_appraisal").value), min:num($("f_min").value), bid:num($("f_bid").value),
+    sale:num($("f_sale").value), second:num($("f_second").value), bidders:num($("f_bidders").value),
+    note:$("f_note").value.trim(), updated:new Date().toISOString()};
+  if(!doc.date||!doc.case||!doc.bid){ $("formMsg").textContent="매각기일·사건번호·우리 입찰가는 꼭 넣어 주세요."; return; }
+  Object.keys(doc).forEach(k=>{ if(doc[k]===null||doc[k]==="") delete doc[k]; });
+  $("saveBtn").disabled=true;
+  try{
+    if(editing) await col.doc(editing).set(doc);
+    else await col.add(doc);
+    $("form").hidden=true; editing=null;
+  }catch(err){
+    $("formMsg").textContent = err&&err.code==="invalid_argument" ? "이 기록장을 고칠 권한이 없어요(보기만 가능)."
+      : err&&err.code==="quota_exceeded" ? "기록장이 가득 찼어요. 오래된 기록을 지운 뒤 다시 저장해 주세요."
+      : "저장하지 못했어요. 잠시 뒤 다시 눌러 주세요.";
+  }finally{ $("saveBtn").disabled=false; }
+});
+async function remove(id){
+  try{ await col.doc(id).delete(); }catch(_){ }
+  confirmId=null; render();
+}
+
+(async()=>{
+  let db = null; try{ db = await SheetDB.use(); }catch(_){ db = null; }
+  const user = null;
+  if(user){ const w=await user.can("data.write"); if(w===false){ canWrite=false; $("addBtn").hidden=true; } }
+  if(!db){ $("addBtn").hidden=true; render(); return; }
+  col = db.collection("bids");
+  col.orderBy("date","desc").onSnapshot(snap=>{
+    rows = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
+    render();
+  }, err=>{
+    rows=[]; render();
+    $("list").firstChild.textContent="기록을 불러오지 못했어요. 페이지를 새로 열어 주세요.";
+  });
+})();
+</script>
+
+</body></html>
