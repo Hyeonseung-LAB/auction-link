@@ -279,6 +279,9 @@ input.in:focus,select.in:focus,textarea.in:focus,input.txt:focus,input.num-in:fo
 thead th{background:#f8f9fb}
 tr.cur td{background:#eef5ff}
 .dock{border-top:1px solid #e3e8ef;box-shadow:0 -4px 16px rgba(20,30,60,.08)}
+/* 캘린더 관심 물건 줄: 단추 칸 폭을 줄마다 같게 — '남은 일정 없음' 줄은 '달력에서 보기'가 없어 칸이 좁아져
+   앞 칸들이 밀렸다(10/23 사장님 "줄이 안 맞네") */
+@media (min-width:761px){.item{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) 300px}}
 </style>
 <div class="wrap">
   <header>
