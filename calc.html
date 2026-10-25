@@ -1,4 +1,4 @@
-<!doctype html><html lang="ko" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><title>경매 계산기</title><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%A7%AE</text></svg>"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><link rel="preconnect" href="https://cdn.jsdelivr.net"><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"></head><body><style>.snav{display:flex;gap:6px;overflow-x:auto;padding:12px 16px 0;max-width:1240px;margin:0 auto;scrollbar-width:none}.snav::-webkit-scrollbar{display:none}.snav a{flex:0 0 auto;padding:7px 13px;border-radius:999px;font:600 13px/1.2 'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;text-decoration:none;color:#566275;background:#fff;border:1.5px solid #d2d8e1;white-space:nowrap}.snav a.on{background:#16202e;color:#fff;border-color:#16202e;box-shadow:inset 0 0 0 200px #16202e}@media (prefers-color-scheme:dark){.snav a{background:#161d27;color:#97a3b4;border-color:#2a3443}.snav a.on{background:#e3e8ef;color:#0e131a;border-color:#e3e8ef;box-shadow:inset 0 0 0 200px #e3e8ef}}</style><style>.snav .hq{margin-left:auto;cursor:pointer}.hov{position:fixed;inset:0;z-index:5000;display:none;align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 12px;background:rgba(10,14,20,.55)}.hov.on{display:flex}.hbx{position:relative;background:#fff;color:#2b3442;border-radius:16px;max-width:560px;width:100%;padding:18px 18px 14px;box-shadow:0 10px 40px rgba(0,0,0,.3);font:14px/1.6 'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;word-break:keep-all}.hbx h2{font-size:17px;margin:0 30px 8px 0}.hbx h3{font-size:14px;margin:14px 0 3px}.hbx ul{margin:0;padding-left:1.15em}.hbx li{margin:2px 0}.hbx .nw{white-space:nowrap}.hbx .hx{position:absolute;top:12px;right:12px;width:32px;height:32px;border:0;border-radius:50%;background:#eef1f5;color:#4e5968;font-size:15px;cursor:pointer}.hbx .hc{display:block;width:100%;margin-top:16px;padding:12px;border:0;border-radius:12px;background:#16202e;box-shadow:inset 0 0 0 200px #16202e;color:#fff;font:inherit;font-weight:700;cursor:pointer}@media (prefers-color-scheme:dark){.hbx{background:#161d27;color:#e3e8ef}.hbx .hx{background:#2a3443;color:#e3e8ef}.hbx .hc{background:#e3e8ef;box-shadow:inset 0 0 0 200px #e3e8ef;color:#0e131a}}</style><nav class="snav" aria-label="빌라 경매 사이트"><a href="villa.html">🏡 빌라 매물</a><a href="villa_results.html">🔨 매각 결과</a><a href="calendar.html">📅 캘린더</a><a href="calc.html" class="on" aria-current="page">🧮 계산기</a><a href="bids.html">📝 입찰기록</a><a href="#" class="hq" id="snavhelp" role="button">❓ 사용법</a></nav><div class="hov" id="hov" role="dialog" aria-modal="true" aria-labelledby="hovt"><div class="hbx"><button class="hx" id="hovx" aria-label="닫기">✕</button><h2 id="hovt">🧮 경매 계산기 사용법</h2><h3>여는 법</h3><ul><li>빌라 카드의 <b>🧮 계산</b>으로 열면 값이 채워져요.</li><li>입찰가 = 예상 낙찰가</li><li>예상 매도가 = 추정 실거래가</li><li>그 사건으로 저장해 둔 계산이 있으면 그걸 불러와요.</li></ul><h3>넣는 값</h3><ul><li>노란 <b>가정</b> 표시(예상 매도가)는 직접 확인한 값으로 바꿔요.</li><li>공시가격을 넣으면 취득세 중과 제외(1억 이하)를 판단해요.</li><li>기본 비용·과세표준은 시트에 있는 서영 기준이 들어가요.</li></ul><h3>결과 보는 법</h3><ul><li><b>남는 돈</b>: 매매사업자로 팔 때 세후 순이익</li><li><b>돈의 흐름</b>: 매도가에서 낙찰가·비용·세금을 뺀 순서</li><li><b>세금 비교</b>: 매매사업자 vs 개인 양도세</li><li><b>준비할 현금</b>: 입찰 당일부터 팔 때까지</li><li><b>최대 입찰가</b>: 목표 순이익을 남기는 입찰가 상한 → <b>입찰가에 넣기</b></li></ul><h3>저장</h3><ul><li><b>저장</b>은 지금 물건을 덮어써요.</li><li><b>새 물건으로 저장</b>은 따로 하나 더 만들어요.</li><li>아래 <b>저장한 물건</b> 표에서 행을 누르면 불러와요.</li></ul><h3>알아 둘 점</h3><ul><li>세금은 참고용이에요.</li><li>신고 전에는 세무사에게 확인해요.</li><li>저장은 구글 시트 <b>경매 데이터</b>에 돼요.</li></ul><button class="hc" id="hovc">알겠어요</button></div></div><script src="sheetdb.js"></script>
+<!doctype html><html lang="ko" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><title>경매 계산기</title><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%A7%AE</text></svg>"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><link rel="preconnect" href="https://cdn.jsdelivr.net"><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"></head><body><style>.snav{display:flex;gap:6px;overflow-x:auto;padding:12px 16px 0;max-width:1240px;margin:0 auto;scrollbar-width:none}.snav::-webkit-scrollbar{display:none}.snav a{flex:0 0 auto;padding:7px 13px;border-radius:999px;font:600 13px/1.2 'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;text-decoration:none;color:#566275;background:#fff;border:1.5px solid #d2d8e1;white-space:nowrap}.snav a.on{background:#16202e;color:#fff;border-color:#16202e;box-shadow:inset 0 0 0 200px #16202e}@media (prefers-color-scheme:dark){.snav a{background:#161d27;color:#97a3b4;border-color:#2a3443}.snav a.on{background:#e3e8ef;color:#0e131a;border-color:#e3e8ef;box-shadow:inset 0 0 0 200px #e3e8ef}}</style><style>.snav .hq{margin-left:auto;cursor:pointer}.hov{position:fixed;inset:0;z-index:5000;display:none;align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 12px;background:rgba(10,14,20,.55)}.hov.on{display:flex}.hbx{position:relative;background:#fff;color:#2b3442;border-radius:16px;max-width:560px;width:100%;padding:18px 18px 14px;box-shadow:0 10px 40px rgba(0,0,0,.3);font:14px/1.6 'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;word-break:keep-all}.hbx h2{font-size:17px;margin:0 30px 8px 0}.hbx h3{font-size:14px;margin:14px 0 3px}.hbx ul{margin:0;padding-left:1.15em}.hbx li{margin:2px 0}.hbx .nw{white-space:nowrap}.hbx .hx{position:absolute;top:12px;right:12px;width:32px;height:32px;border:0;border-radius:50%;background:#eef1f5;color:#4e5968;font-size:15px;cursor:pointer}.hbx .hc{display:block;width:100%;margin-top:16px;padding:12px;border:0;border-radius:12px;background:#16202e;box-shadow:inset 0 0 0 200px #16202e;color:#fff;font:inherit;font-weight:700;cursor:pointer}@media (prefers-color-scheme:dark){.hbx{background:#161d27;color:#e3e8ef}.hbx .hx{background:#2a3443;color:#e3e8ef}.hbx .hc{background:#e3e8ef;box-shadow:inset 0 0 0 200px #e3e8ef;color:#0e131a}}</style><nav class="snav" aria-label="빌라 경매 사이트"><a href="villa.html">🏡 빌라 매물</a><a href="villa_results.html">🔨 매각 결과</a><a href="calendar.html">📅 캘린더</a><a href="calc.html" class="on" aria-current="page">🧮 계산기</a><a href="bids.html">📝 입찰기록</a><a href="#" class="hq" id="snavhelp" role="button">❓ 사용법</a></nav><div class="hov" id="hov" role="dialog" aria-modal="true" aria-labelledby="hovt"><div class="hbx"><button class="hx" id="hovx" aria-label="닫기">✕</button><h2 id="hovt">🧮 경매 계산기 사용법</h2><h3>여는 법</h3><ul><li>빌라 카드의 <b>🧮 계산</b>으로 열면 값이 채워져요.</li><li>입찰가 = 예상 낙찰가</li><li>예상 매도가 = 추정 실거래가</li><li>그 사건으로 저장해 둔 계산이 있으면 그걸 불러와요.</li></ul><h3>넣는 값</h3><ul><li>노란 <b>가정</b> 표시(예상 매도가)는 직접 확인한 값으로 바꿔요.</li><li>공시가격을 넣으면 취득세 중과 제외(1억 이하)를 판단해요.</li><li>기본 비용·과세표준은 시트에 있는 서영 기준이 들어가요.</li></ul><h3>결과 보는 법</h3><ul><li><b>남는 돈</b>: 매매사업자로 팔 때 세후 순이익</li><li><b>돈의 흐름</b>: 매도가에서 낙찰가·비용·세금을 뺀 순서</li><li><b>세금 비교</b>: 매매사업자 vs 개인 양도세</li><li><b>준비할 현금</b>: 입찰 당일부터 팔 때까지</li><li><b>최대 입찰가</b>: 목표 순이익을 남기는 입찰가 상한 → <b>입찰가에 넣기</b></li><li><b>입찰가별 손익</b>: 빌라 카드 🧮 로 열면 이길 확률·기대값 칸이 같이 나와요.</li><li>기대값 = 이길 확률 × 세후 순이익 · ★ = 가장 큰 줄</li></ul><h3>저장</h3><ul><li><b>저장</b>은 지금 물건을 덮어써요.</li><li><b>새 물건으로 저장</b>은 따로 하나 더 만들어요.</li><li>아래 <b>저장한 물건</b> 표에서 행을 누르면 불러와요.</li></ul><h3>알아 둘 점</h3><ul><li>세금은 참고용이에요.</li><li>신고 전에는 세무사에게 확인해요.</li><li>저장은 구글 시트 <b>경매 데이터</b>에 돼요.</li></ul><button class="hc" id="hovc">알겠어요</button></div></div><script src="sheetdb.js"></script>
 <script>(function(){var o=document.getElementById('hov'),b=document.getElementById('snavhelp');function op(e){if(e)e.preventDefault();o.classList.add('on');}function cl(){o.classList.remove('on');try{localStorage.setItem('site-help-calc-1023','1');}catch(_){}}b.addEventListener('click',op);document.getElementById('hovx').addEventListener('click',cl);document.getElementById('hovc').addEventListener('click',cl);o.addEventListener('click',function(e){if(e.target===o)cl();});document.addEventListener('keydown',function(e){if(e.key==='Escape')cl();});var s=null;try{s=localStorage.getItem('site-help-calc-1023');}catch(_){s='1';}if(!s&&!navigator.webdriver)op();})();</script>
 <style>
 /* 레이아웃: 매각물건명세서처럼 괘선 표로 된 입력 양식(왼쪽) + 인주색 도장 상자로 찍힌 결과 패널(오른쪽, 따라 내려옴) */
@@ -278,6 +278,13 @@ input.in:focus,select.in:focus,textarea.in:focus,input.txt:focus,input.num-in:fo
 .day.sel{outline-color:#3182f6}
 thead th{background:#f8f9fb}
 tr.cur td{background:#eef5ff}
+/* 🎯 이길 확률 · 기대값(10/25) */
+tr.best td:first-child b::after{content:' ★';color:#f04452}
+.seal-win{margin-top:8px;font-size:12.5px;color:#4e5968;word-break:keep-all}
+.seal-win b{color:#191f28}
+.sens-notes{margin:10px 2px 0;padding-left:1.1em;color:#8b95a1;font-size:12.5px;line-height:1.6;word-break:keep-all}
+.sens-notes li{margin:1px 0}
+td .tg{display:block;font-size:11px;color:#3182f6;font-weight:600}
 .dock{border-top:1px solid #e3e8ef;box-shadow:0 -4px 16px rgba(20,30,60,.08)}
 /* 캘린더 관심 물건 줄: 단추 칸 폭을 줄마다 같게 — '남은 일정 없음' 줄은 '달력에서 보기'가 없어 칸이 좁아져
    앞 칸들이 밀렸다(10/23 사장님 "줄이 안 맞네") */
@@ -379,6 +386,7 @@ tr.cur td{background:#eef5ff}
         <div class="seal-out">
           <div class="seal-line main"><span class="who">매매사업자로 팔 때</span><span class="val" id="mb-biz"></span><span class="sub" id="mb-biz-sub"></span></div>
           <div class="seal-line"><span class="who">개인 양도세로 팔 때</span><span class="val" id="mb-cgt"></span><span class="sub" id="mb-cgt-sub"></span></div>
+          <div class="seal-win" id="mb-win" hidden></div>
         </div>
         <div><button type="button" class="btn seal-btn" id="apply-max">매매사업자 최대 입찰가를 입찰가에 넣기</button></div>
       </div>
@@ -397,6 +405,7 @@ tr.cur td{background:#eef5ff}
   <section class="sheet wide" aria-labelledby="h-sens">
     <h2 id="h-sens"><span>입찰가별 손익</span><small>최저가부터 올려가며 비교. 파란 줄이 지금 입찰가</small></h2>
     <div class="table-wrap"><table id="sens"></table></div>
+    <ul class="sens-notes" id="sens-notes"></ul>
   </section>
 
   <section class="sheet wide" aria-labelledby="h-bd">
@@ -550,6 +559,15 @@ function maxBid(s,kind,target,which){
   for(let i=0;i<60;i++){ const mid=(lo+hi)/2; if(f(mid)>=0) lo=mid; else hi=mid; }
   return Math.floor(lo/1000)*1000;
 }
+// 🎯 이겼을 비율 — q = 비슷한 물건이 팔린 배수(낙찰가÷최저가)의 0·5·…·100% 지점(21칸, 빌라 페이지가 넘긴다).
+//  입찰 배수 x 보다 낮게 팔린 비율 = 그 경매들에 이 금액을 썼으면 이겼을 비율(임학동 10/12 셈과 같다).
+function winP(q,x){
+  if(!Array.isArray(q)||q.length<2) return null;
+  const n=q.length-1;
+  if(x<=q[0]) return 0; if(x>q[n]) return 1;
+  for(let i=1;i<=n;i++) if(x<=q[i]) return (i-1+(q[i]>q[i-1]?(x-q[i-1])/(q[i]-q[i-1]):0))/n;
+  return 1;
+}
 /*CORE-END*/
 
 (function(){
@@ -596,7 +614,7 @@ function maxBid(s,kind,target,which){
   const TYPES={};
   SECTIONS.forEach(s=>s.rows.forEach(r=>{ TYPES[r.k]=r.type; }));
   TYPES.targetWon='won'; TYPES.targetPct='num';
-  const SAVED_KEYS=Object.keys(TYPES).filter(k=>TYPES[k]!=='auto').concat(['targetMode']);
+  const SAVED_KEYS=Object.keys(TYPES).filter(k=>TYPES[k]!=='auto').concat(['targetMode','bq','bq2','bn','bn2','bc']);
 
   const BLANK={name:'',caseNo:'',appraisal:0,minPrice:0,bid:0,rebid:false,pubPrice:0,area:0,adjusted:false,redevelop:false,houseCount:1,
     legal:600000,eviction:500000,mgmt:500000,repairCap:2000000,repairRev:4000000,other:0,
@@ -643,15 +661,23 @@ function maxBid(s,kind,target,which){
   //  · 서영 소득 과세표준 같은 개인 기본값은 공개 저장소(이 파일)에 두지 않고 시트에서 읽는다.
   const Q=new URLSearchParams(location.search), QCASE=Q.get('case')||'';
   if(QCASE) draft=null;
+  // 🎯 bq·bq2 = 이겼을 비율 곡선(배수×1000 을 '.'로 이음), bn·bn2 = 건수, bc = 비교 조건(10/25)
+  function qDist(){
+    const d=v=>String(v||'').split('.').map(Number).filter(x=>isFinite(x)&&x>0).map(x=>x/1000);
+    const o={}, a=d(Q.get('bq')), b2=d(Q.get('bq2'));
+    if(a.length===21){ o.bq=a; o.bn=Number(Q.get('bn'))||0; o.bc=Q.get('bc')||''; }
+    if(a.length===21&&b2.length===21){ o.bq2=b2; o.bn2=Number(Q.get('bn2'))||0; }
+    return o;
+  }
   async function applyQuery(){
     if(!QCASE) return false;
     const saved=deals.filter(x=>x.caseNo===QCASE).sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))[0];
-    if(saved){ loadDeal(saved); toast('저장해 둔 계산을 불러왔어요'); }
+    if(saved){ loadDeal(saved); const qd=qDist(); if(qd.bq){ Object.assign(state,qd); render(); saveDraft(); } toast('저장해 둔 계산을 불러왔어요'); }
     else{
       let def={};
       try{ if(db){ const s=await db.doc('notes/calc-defaults').get(); if(s.exists) def=s.data()||{}; } }catch(e){}
       const n=k=>Number(Q.get(k))||0;
-      state={...BLANK,...def,name:Q.get('name')||'',caseNo:QCASE,appraisal:n('appraisal'),minPrice:n('min'),bid:n('bid')||n('min'),area:n('area'),sellPrice:n('sell')};
+      state={...BLANK,...def,name:Q.get('name')||'',caseNo:QCASE,appraisal:n('appraisal'),minPrice:n('min'),bid:n('bid')||n('min'),area:n('area'),sellPrice:n('sell'),...qDist()};
       currentId=null; dirty=true; touched=true; writeInputs(); render(); renderDeals(); saveDraft();
       toast(n('sell')?'빌라 카드 값으로 채웠어요 · 예상 매도가 = 추정 실거래가':'빌라 카드 값으로 채웠어요 · 예상 매도가를 넣어 주세요');
     }
@@ -837,23 +863,59 @@ function maxBid(s,kind,target,which){
     $('mb-cgt-sub').textContent=sc; $('mb-cgt-sub').className='sub'+(bc?' bad':'');
     $('apply-max').disabled=mb==null;
     $('d-max').textContent=mb==null?'—':kr(mb);
+    const w=$('mb-win');
+    if(Array.isArray(state.bq)&&mb!=null&&state.minPrice>0&&mb>=state.minPrice){
+      const y=mb/state.minPrice, p2=Array.isArray(state.bq2)?winP(state.bq2,y):null;
+      w.innerHTML=`이 금액이면 이겼을 비율 <b>${pct(winP(state.bq,y),0)}</b>`+(p2!=null?` · 1~2명일 때 <b>${pct(p2,0)}</b>`:'');
+      w.hidden=false;
+    } else w.hidden=true;
   }
 
   function renderSens(){
     const base=state.minPrice>0?state.minPrice:(state.bid>0?state.bid:0);
-    const t=$('sens');
-    if(!(base>0)||!(state.sellPrice>0)){ t.innerHTML='<tbody><tr><td class="empty" style="white-space:normal">최저매각가격과 예상 매도가를 넣으면 입찰가별 손익표가 나와요.</td></tr></tbody>'; return; }
+    const t=$('sens'), notes=$('sens-notes');
+    if(!(base>0)||!(state.sellPrice>0)){ t.innerHTML='<tbody><tr><td class="empty" style="white-space:normal">최저매각가격과 예상 매도가를 넣으면 입찰가별 손익표가 나와요.</td></tr></tbody>'; notes.innerHTML=''; return; }
+    // 🎯 이길 확률 칸(10/25) — 빌라 카드 🧮 로 열면 비슷한 물건 곡선(bq·bq2)이 같이 온다. 임학동 10/12 셈과 같다.
+    const hasQ=Array.isArray(state.bq)&&state.bq.length===21&&state.minPrice>0;
+    const hasQ2=hasQ&&Array.isArray(state.bq2)&&state.bq2.length===21;
+    const r10=v=>Math.round(v/10000)*10000;
     const mults=[1,1.05,1.1,1.15,1.2,1.25,1.3,1.4,1.5];
-    let bids=mults.map((m,i)=>i===0?base:Math.round(base*m/10000)*10000);
+    let bids=mults.map((m,i)=>i===0?base:r10(base*m));
     if(state.bid>0) bids.push(state.bid);
-    bids=[...new Set(bids)].sort((a,b)=>a-b);
-    const head='<thead><tr><th>입찰가</th><th>감정가 대비</th><th>들어가는 현금</th><th>세후 순이익 · 사업자</th><th>수익률 · 사업자</th><th>세후 순이익 · 양도세</th></tr></thead>';
-    const body=bids.map(b=>{
-      const r=compute({...state,bid:b});
-      const cls=v=>v<0?'n neg':v>0?'n pos':'n';
-      return `<tr class="${b===state.bid?'cur':''}"><td class="n">${kr(b)}</td><td class="n">${state.appraisal>0?pct(b/state.appraisal):'—'}</td><td class="n">${kr(r.cash)}</td><td class="${cls(r.biz.net)}">${signed(r.biz.net)}</td><td class="n">${r.cash>0?pct(r.biz.roi):'—'}</td><td class="${cls(r.cgt.net)}">${signed(r.cgt.net)}</td></tr>`;
+    const tags={};
+    if(hasQ){
+      // 카드의 예상 낙찰가·넉넉히와 같은 금액(배수를 소수 둘째 자리로 반올림한 뒤 만 원 단위)
+      const r2=v=>Math.round(v*100)/100, mid=r10(state.minPrice*r2(state.bq[10])), up=r10(state.minPrice*r2(state.bq[15]));
+      bids.push(mid,up); tags[mid]='예상 낙찰가'; tags[up]=(tags[up]?tags[up]+' · ':'')+'넉넉히';
+      if(lastMaxBiz!=null&&lastMaxBiz>=state.minPrice){ bids.push(lastMaxBiz); tags[lastMaxBiz]=(tags[lastMaxBiz]?tags[lastMaxBiz]+' · ':'')+'최대 입찰가'; }
+    }
+    bids=[...new Set(bids)].filter(b=>b>=base).sort((a,b)=>a-b);
+    // 🎯 칸은 입찰가 바로 옆 — 폰(360폭)에서 표를 밀지 않아도 보이게. 1~2명 숫자는 같은 칸 아래 작은 줄
+    const head='<thead><tr><th>입찰가</th>'+(hasQ?'<th>이길 확률</th><th>기대값 · 사업자</th>':'')
+      +'<th>감정가 대비</th><th>들어가는 현금</th><th>세후 순이익 · 사업자</th><th>수익률 · 사업자</th><th>세후 순이익 · 양도세</th></tr></thead>';
+    const rows=bids.map(b=>{
+      const r=compute({...state,bid:b}), y=state.minPrice>0?b/state.minPrice:0;
+      const p1=hasQ?winP(state.bq,y):null, p2=hasQ2?winP(state.bq2,y):null;
+      return {b,r,p1,p2,ev:p1!=null?p1*r.biz.net:null,ev2:p2!=null?p2*r.biz.net:null};
+    });
+    let best=null; if(hasQ) for(const x of rows) if(x.ev>0&&(best==null||x.ev>best.ev)) best=x;
+    const cls=v=>v<0?'n neg':v>0?'n pos':'n';
+    const body=rows.map(x=>{
+      const {b,r}=x, tg=tags[b]?`<span class="tg">${tags[b]}</span>`:'';
+      const rc=[b===state.bid?'cur':'',x===best?'best':''].filter(Boolean).join(' ');
+      return `<tr class="${rc}"><td class="n"><b>${kr(b)}</b>${tg}</td>`
+        +(hasQ?`<td class="n">${pct(x.p1,0)}${x.p2!=null?`<span class="small">1~2명 ${pct(x.p2,0)}</span>`:''}</td>`
+          +`<td class="${cls(x.ev)}">${signed(x.ev)}${x.ev2!=null?`<span class="small">1~2명 ${signed(x.ev2)}</span>`:''}</td>`:'')
+        +`<td class="n">${state.appraisal>0?pct(b/state.appraisal):'—'}</td><td class="n">${kr(r.cash)}</td><td class="${cls(r.biz.net)}">${signed(r.biz.net)}</td><td class="n">${r.cash>0?pct(r.biz.roi):'—'}</td><td class="${cls(r.cgt.net)}">${signed(r.cgt.net)}</td></tr>`;
     }).join('');
     t.innerHTML=head+'<tbody>'+body+'</tbody>';
+    notes.innerHTML=hasQ?[
+      `이길 확률 = 비슷한 물건 ${state.bn||'?'}건${state.bc?'('+esc(state.bc)+')':''} 중 이 금액보다 낮게 팔린 비율`,
+      hasQ2?`1~2명 = 그중 1~2명만 들어온 ${state.bn2||'?'}건 기준${(state.bn2||0)<30?' · 표본이 적어 참고만':''}`:'',
+      '기대값 = 이길 확률 × 매매사업자 세후 순이익 · ★ = 기대값이 가장 큰 줄',
+      '아무도 안 들어와 유찰될 가능성은 빼고 셌어요(보수적).',
+      '끝자리는 딱 떨어지게 쓰지 말고 조금 올려 동률을 피해요.'
+    ].filter(Boolean).map(x=>`<li>${x}</li>`).join(''):'<li>이길 확률·기대값 칸은 빌라 카드의 🧮 계산으로 열면 나와요.</li>';
   }
 
   function dl(rows){ return '<dl>'+rows.map(([k,v,tot])=>`<dt${tot?' class="tot"':''}>${k}</dt><dd${tot?' class="tot"':''}>${v}</dd>`).join('')+'</dl>'; }
