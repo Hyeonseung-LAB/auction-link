@@ -255,8 +255,22 @@ tr.cur td{background:#eef5ff}
 /* 캘린더 관심 물건 줄: 단추 칸 폭을 줄마다 같게 — '남은 일정 없음' 줄은 '달력에서 보기'가 없어 칸이 좁아져
    앞 칸들이 밀렸다(10/23 사장님 "줄이 안 맞네") */
 @media (min-width:761px){.item{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) 300px}}
+/* 🔁 매각기일 따라가기 알림(10/27) — ✕ 를 누를 때까지 맨 위에 남는다(기기마다) */
+.cal-alerts{display:flex;flex-direction:column;gap:8px;margin:14px 0 4px}
+.cal-alerts:empty{display:none}
+.cal-al{display:flex;align-items:flex-start;gap:10px;padding:12px 12px 12px 14px;border-radius:14px;background:#fff;border:1.5px solid #ffd6d9;box-shadow:0 2px 10px rgba(240,68,82,.08);word-break:keep-all}
+.cal-al.sold{border-color:#e3e8ef;box-shadow:none}
+.cal-al .ic{flex:0 0 auto;font-size:18px;line-height:1.3}
+.cal-al .tx{flex:1 1 auto;min-width:0;font-size:13.5px;line-height:1.55;color:#333d4b;cursor:pointer}
+.cal-al .tx b{color:#191f28}
+.cal-al .tx .ln{display:block}
+.cal-al .tx .sm{display:block;color:#8b95a1;font-size:12px}
+.cal-al .nw{white-space:nowrap}
+.cal-al .x{flex:0 0 auto;width:30px;height:30px;border:0;border-radius:50%;background:#f2f4f6;color:#6b7684;font-size:14px;cursor:pointer}
+.cal-al .x:hover{background:#e5e8eb;color:#191f28}
 </style>
 <div class="wrap">
+  <div class="cal-alerts" id="cal-alerts" aria-live="polite"></div>
   <header class="head-row">
     <div>
       <div class="eyebrow">법원경매 · 관심 물건 일정</div>
@@ -481,7 +495,7 @@ tr.cur td{background:#eef5ff}
     }catch(err){ btn.disabled=false; toast('삭제하지 못했어요. 잠시 뒤 다시 눌러주세요.'); }
   }
 
-  function renderAll(){ renderUpcoming(); renderCalendar(); renderDay(); renderList(); }
+  function renderAll(){ renderAlerts(); renderUpcoming(); renderCalendar(); renderDay(); renderList(); }
 
   let rules=[], rulesReady=false, editRules=false;
   function renderRules(){
@@ -589,6 +603,79 @@ tr.cur td{background:#eef5ff}
     saveRules([...rules,{id:'r'+Date.now().toString(36),text}]);
   });
 
+
+  // ── 🔁 관심물건 매각기일 따라가기(10/27 사장님 "유찰되거나 기일이 바뀌면 캘린더에도 자동으로 옮겨 주고, 맨 위에 알람 — x 를 눌러야 없어지게") ──
+  //  봇이 매일 아침 올리는 villa_watch.json(빌라 목록의 지금 매각기일·최저가·유찰 횟수 L + 최근 45일 결과 R)과 이 캘린더의
+  //  '매각기일'을 견준다. 날짜가 바뀌었으면(유찰·기일 변경·재매각) 새 매각기일을 넣고 옛 날짜엔 '→ 유찰' 을 남긴다.
+  //  목록에서 빠지고 결과가 매각·취하 등이면 알림만 띄운다(상태는 사람이 정한다).
+  //  알림 목록은 시트(notes/cal-alerts)라 두 폰이 같이 보고, ✕ 는 기기마다(localStorage) — 내가 눌러야 내 화면에서 사라진다.
+  const AL_KEY='cal-alert-dismissed-v1', AL_DAYS=45;
+  let watch=null, alerts=[], syncing=false; const doneSync=new Set();
+  let dismissed={}; try{ dismissed=JSON.parse(localStorage.getItem(AL_KEY)||'{}')||{}; }catch(e){ dismissed={}; }
+  const ckeyOf=c=>{ const m=String(c||'').replace(/\s/g,'').match(/(\d{4})타경(\d+)(?:\((\d+)\))?/); return m?('c'+m[1]+'-'+m[2]+(m[3]?'-'+m[3]:'')):''; };
+  const mdOf=s=>{ const d=parseYmd(s); return d?`${d.getMonth()+1}/${d.getDate()}`:String(s||''); };
+  const krs=v=>kr(v).replace(/원$/,'');
+  function renderAlerts(){
+    const host=$('cal-alerts'); if(!host) return;
+    const list=alerts.filter(a=>!dismissed[a.id]).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+    host.innerHTML=list.map(a=>{
+      const sold=a.type==='end', name=`<b>${esc(a.title||a.ck)}</b>`;
+      let lines;
+      if(!sold){
+        const pct=a.min0&&a.min1&&a.min1!==a.min0?` (${a.min1<a.min0?'−':'+'}${Math.round(Math.abs(1-a.min1/a.min0)*100)}%)`:'';
+        lines=[`${name} · ${esc(a.why)}`,
+          `<span class="nw">📅 매각기일 ${esc(mdOf(a.from))} → <b>${esc(mdOf(a.to))}</b></span>`+(a.min1&&a.min1!==a.min0?` · <span class="nw">💰 최저가 ${esc(krs(a.min0))} → <b>${esc(krs(a.min1))}</b>${pct}</span>`:''),
+          `<span class="sm">캘린더에 새 매각기일을 넣었어요 · 누르면 그 날로 가요</span>`];
+      } else {
+        lines=[`${name} · ${esc(mdOf(a.from))} <b>${esc(a.why)}</b>`+(a.sale?` · <span class="nw">낙찰 ${esc(krs(a.sale))}</span>`:''),
+          `<span class="sm">빌라 목록에서 빠졌어요 · 상태는 물건의 ‘수정’에서 바꿔요</span>`];
+      }
+      return `<div class="cal-al${sold?' sold':''}" data-al="${esc(a.id)}"><span class="ic">${sold?'🔨':'🔁'}</span>`
+        +`<span class="tx" data-goto="${esc(sold?a.from:a.to)}">${lines.map(l=>`<span class="ln">${l}</span>`).join('')}</span>`
+        +`<button type="button" class="x" data-al-x="${esc(a.id)}" aria-label="알림 닫기">✕</button></div>`;
+    }).join('');
+  }
+  document.addEventListener('click',e=>{ const x=e.target.closest('[data-al-x]'); if(!x) return;
+    e.stopPropagation(); dismissed[x.dataset.alX]=1; try{ localStorage.setItem(AL_KEY,JSON.stringify(dismissed)); }catch(err){} renderAlerts(); },true);
+  async function syncWatch(){
+    if(!db||!ready||!watch||syncing) return; syncing=true;
+    try{
+      const L=watch.L||{}, R=watch.R||{}, add=[], now=new Date().toISOString();
+      for(const it of items){
+        if(['낙찰','패찰','종료'].includes(it.status)) continue;
+        const ck=ckeyOf(it.caseNo); if(!ck) continue;
+        const sales=(it.events||[]).filter(e=>e.kind==='매각기일'&&parseYmd(e.date));
+        if(!sales.length) continue;
+        const cur=sales.reduce((a,b)=>a.date>=b.date?a:b), w=L[ck], r=R[ck], name=it.title||it.caseNo;
+        // 새 매각기일: 빌라 목록 → 없으면 결과의 '다음 기일'(유찰 행)
+        const to=w?w[0]:(r&&r[0]>=cur.date&&r[3]?r[3]:''), min1=w?w[1]:(r&&r[3]?r[4]:0), fail=w?w[2]:null;
+        if(to&&to!==cur.date&&!sales.some(e=>e.date===to)){
+          const key=it.id+'@'+to; if(doneSync.has(key)) continue; doneSync.add(key);
+          const why=r&&r[0]===cur.date&&r[1]?r[1]:(cur.date<todayStr?'유찰 또는 기일 변경':'기일 변경');
+          const pct=it.appraisal&&min1?Math.round(min1/it.appraisal*100):0, dep=Math.round((min1||0)*0.1);
+          const ne={id:'w'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),date:to,time:cur.time||'10:00',kind:'매각기일',
+            note:[fail!=null?(fail+1)+'차':'',pct?'최저 '+pct+'%':'',dep?'보증금 '+dep.toLocaleString('ko-KR')+'원':'','자동: '+why].filter(Boolean).join(' · ')};
+          const events=(it.events||[]).map(e=>e.kind==='매각기일'&&e.date===cur.date&&!/(^|\n)→ /.test(e.note||'')?{...e,note:(e.note?e.note+'\n':'')+'→ '+why}:e);
+          const body={...it}; delete body.id; body.events=[...events,ne]; if(min1) body.minPrice=min1; body.updatedAt=now;
+          try{ await db.collection('items').doc(it.id).set(body); }catch(err){ doneSync.delete(key); continue; }
+          add.push({id:ck+'@'+to,ck,type:'move',title:name,why,from:cur.date,to,min0:Number(it.minPrice)||0,min1:Number(min1)||0,at:now});
+        } else if(!w&&r&&r[0]>=cur.date&&r[1]!=='유찰'&&cur.date<=todayStr){
+          add.push({id:ck+'@'+r[1]+'@'+r[0],ck,type:'end',title:name,why:r[1]==='매각'?'매각됨':r[1],from:r[0],sale:r[2]||0,at:now});
+        }
+      }
+      const have=new Set(alerts.map(a=>a.id)), fresh=add.filter(a=>!have.has(a.id));
+      if(fresh.length){
+        const cut=new Date(Date.now()-AL_DAYS*86400000).toISOString();
+        const next=[...alerts.filter(a=>String(a.at)>=cut),...fresh];
+        alerts=next; renderAlerts();
+        try{ await db.doc('notes/cal-alerts').set({list:next,updatedAt:now}); }catch(err){}
+      }
+    } finally { syncing=false; }
+  }
+  async function loadWatch(){
+    try{ const r=await fetch('villa_watch.json?t='+Date.now(),{cache:'no-store'}); if(r.ok){ watch=await r.json(); syncWatch(); } }catch(e){}
+  }
+
   renderLegend(); renderAll(); renderRules();
 
   (async()=>{
@@ -597,6 +684,10 @@ tr.cur td{background:#eef5ff}
     dbChecked=true;
     if(!ns){ $('btn-add').disabled=true; $('dd-add').disabled=true; renderAll(); renderRules(); return; }
     db=ns; renderAll(); renderRules();
+    db.doc('notes/cal-alerts').onSnapshot(snap=>{ const d=snap.exists?snap.data():null;
+      if(d&&Array.isArray(d.list)) alerts=[...d.list,...alerts.filter(a=>!d.list.some(x=>x.id===a.id))];
+      renderAlerts(); },()=>{});
+    loadWatch();
     db.doc('notes/checklist').onSnapshot(snap=>{
       const d=snap.exists?snap.data():null;
       rules=d&&Array.isArray(d.items)?d.items:[];
@@ -604,7 +695,7 @@ tr.cur td{background:#eef5ff}
     },()=>{ $('rules-empty').textContent='체크리스트를 불러오지 못했어요. 페이지를 다시 열어주세요.'; });
     db.collection('items').onSnapshot(snap=>{
       items=snap.docs.filter(d=>d.exists).map(d=>({id:d.id,...(d.data()||{})}));
-      ready=true; renderAll();
+      ready=true; renderAll(); syncWatch();
     },()=>{ $('items').innerHTML='<p class="empty">관심 물건을 불러오지 못했어요. 페이지를 다시 열어주세요.</p>'; });
   })();
 })();
