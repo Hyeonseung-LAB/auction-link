@@ -268,6 +268,9 @@ tr.cur td{background:#eef5ff}
 .cal-al .nw{white-space:nowrap}
 .cal-al .x{flex:0 0 auto;width:30px;height:30px;border:0;border-radius:50%;background:#f2f4f6;color:#6b7684;font-size:14px;cursor:pointer}
 .cal-al .x:hover{background:#e5e8eb;color:#191f28}
+/* 📋 매물 정보로 — 물건 이름 누르기(10/28) */
+a.tlink{color:inherit;text-decoration:none;cursor:pointer}
+a.tlink:hover{color:#3182f6;text-decoration:underline}
 </style>
 <div class="wrap">
   <div class="cal-alerts" id="cal-alerts" aria-live="polite"></div>
@@ -455,8 +458,8 @@ tr.cur td{background:#eef5ff}
     const evs=allEvents().filter(e=>e.date===sel);
     const host=$('dd-body');
     if(!evs.length){ host.innerHTML='<p class="empty">이 날은 관심 물건 일정이 없어요.</p>'; return; }
-    host.innerHTML=evs.map(e=>{ const kd=kindOf(e.kind), it=e.item, u=safeUrl(it.url);
-      return `<div class="ev ${kd.cls}"><div class="ev-top"><span class="kind">${esc(kd.k)}${e.time?' · '+esc(e.time):''}</span><span class="pill ${stCls(it.status)}">${esc(it.status||'관심')}</span></div><div class="ev-name">${esc(it.title||it.caseNo||'이름 없는 물건')}</div><div class="ev-note">${esc([it.caseNo,it.court].filter(Boolean).join(' · '))}${it.minPrice?`\n최저가 ${esc(kr(it.minPrice))}${it.appraisal?` (감정가의 ${Math.round(it.minPrice/it.appraisal*100)}%)`:''}`:''}${e.note?'\n'+esc(e.note):''}</div><div class="ev-actions"><button type="button" class="link-btn" data-edit="${esc(it.id)}">수정</button>${u?`<a class="link-btn" href="${esc(u)}" target="_blank" rel="noopener">옥션원</a>`:''}<button type="button" class="link-btn danger" data-del="${esc(it.id)}">물건 삭제</button></div></div>`; }).join('');
+    host.innerHTML=evs.map(e=>{ const kd=kindOf(e.kind), it=e.item, u=safeUrl(it.url), vh=villaHref(it), nm=esc(it.title||it.caseNo||'이름 없는 물건');
+      return `<div class="ev ${kd.cls}"><div class="ev-top"><span class="kind">${esc(kd.k)}${e.time?' · '+esc(e.time):''}</span><span class="pill ${stCls(it.status)}">${esc(it.status||'관심')}</span></div><div class="ev-name">${vh?`<a class="tlink" href="${esc(vh)}">${nm}</a>`:nm}</div><div class="ev-note">${esc([it.caseNo,it.court].filter(Boolean).join(' · '))}${it.minPrice?`\n최저가 ${esc(kr(it.minPrice))}${it.appraisal?` (감정가의 ${Math.round(it.minPrice/it.appraisal*100)}%)`:''}`:''}${e.note?'\n'+esc(e.note):''}</div><div class="ev-actions">${vh?`<a class="link-btn" href="${esc(vh)}">📋 매물 정보</a>`:''}<button type="button" class="link-btn" data-edit="${esc(it.id)}">수정</button>${u?`<a class="link-btn" href="${esc(u)}" target="_blank" rel="noopener">옥션원</a>`:''}<button type="button" class="link-btn danger" data-del="${esc(it.id)}">물건 삭제</button></div></div>`; }).join('');
   }
 
   function nextEvent(it){
@@ -475,7 +478,16 @@ tr.cur td{background:#eef5ff}
     host.innerHTML=sorted.map(it=>{ const nx=nextEvent(it), u=safeUrl(it.url);
       const nxt=nx?`<span class="kind ${kindOf(nx.kind).cls}">${esc(kindOf(nx.kind).k)}</span> ${esc(nx.date.replace(/-/g,'.'))} · <b class="num">${ddLabel(ddays(nx.date))}</b>`:'<span class="s">남은 일정 없음</span>';
       const money=it.minPrice?`최저 ${esc(kr(it.minPrice))}${it.appraisal?` <span class="s">/ 감정 ${esc(kr(it.appraisal))}</span>`:''}`:(it.appraisal?`감정 ${esc(kr(it.appraisal))}`:'<span class="s">금액 미입력</span>');
-      return `<div class="item"><div><div class="t">${esc(it.title||it.caseNo||'이름 없는 물건')} <span class="pill ${stCls(it.status)}">${esc(it.status||'관심')}</span></div><div class="s">${esc([it.caseNo,it.court].filter(Boolean).join(' · '))}</div></div><div class="money">${money}</div><div class="next">${nxt}</div><div class="acts"><button type="button" class="link-btn" data-edit="${esc(it.id)}">수정</button>${nx?`<button type="button" class="link-btn" data-goto="${esc(nx.date)}">달력에서 보기</button>`:''}${u?`<a class="link-btn" href="${esc(u)}" target="_blank" rel="noopener">옥션원</a>`:''}<a class="link-btn" href="${calcHref(it)}">계산기</a><button type="button" class="link-btn danger" data-del="${esc(it.id)}">삭제</button></div></div>`; }).join('');
+      const vh=villaHref(it), nm=esc(it.title||it.caseNo||'이름 없는 물건');
+      return `<div class="item"><div><div class="t">${vh?`<a class="tlink" href="${esc(vh)}" title="빌라 매물에서 상세 보기">${nm}</a>`:nm} <span class="pill ${stCls(it.status)}">${esc(it.status||'관심')}</span></div><div class="s">${esc([it.caseNo,it.court].filter(Boolean).join(' · '))}</div></div><div class="money">${money}</div><div class="next">${nxt}</div><div class="acts">${vh?`<a class="link-btn" href="${esc(vh)}">📋 매물 정보</a>`:''}<button type="button" class="link-btn" data-edit="${esc(it.id)}">수정</button>${nx?`<button type="button" class="link-btn" data-goto="${esc(nx.date)}">달력에서 보기</button>`:''}${u?`<a class="link-btn" href="${esc(u)}" target="_blank" rel="noopener">옥션원</a>`:''}<a class="link-btn" href="${calcHref(it)}">계산기</a><button type="button" class="link-btn danger" data-del="${esc(it.id)}">삭제</button></div></div>`; }).join('');
+  }
+  // 📋 매물 정보(10/28 사장님) — 빌라 매물 페이지의 그 물건 상세 창으로. 옥션원 번호는 따라가기 파일(L·R 끝 칸)에서
+  function villaHref(it){
+    const m=String(it.caseNo||'').replace(/\s/g,'').match(/(\d{4})타경(\d+)(?:\((\d+)\))?/); if(!m) return '';
+    const ck='c'+m[1]+'-'+m[2]+(m[3]?'-'+m[3]:''), w=watch&&((watch.L||{})[ck]||(watch.R||{})[ck]);
+    const pid=w?String(w[(watch.L||{})[ck]?3:5]||''):'';
+    const q=new URLSearchParams({d:ck,case:it.caseNo||'',t:it.title||''}); if(pid) q.set('pid',pid);
+    return 'villa.html#'+q.toString();
   }
   function calcHref(it){ const q=new URLSearchParams({case:it.caseNo||'',name:it.title||'',appraisal:it.appraisal||0,min:it.minPrice||0}); return 'calc.html?'+esc(q.toString()); }
 
@@ -673,7 +685,7 @@ tr.cur td{background:#eef5ff}
     } finally { syncing=false; }
   }
   async function loadWatch(){
-    try{ const r=await fetch('villa_watch.json?t='+Date.now(),{cache:'no-store'}); if(r.ok){ watch=await r.json(); syncWatch(); } }catch(e){}
+    try{ const r=await fetch('villa_watch.json?t='+Date.now(),{cache:'no-store'}); if(r.ok){ watch=await r.json(); renderList(); renderDay(); syncWatch(); } }catch(e){}
   }
 
   renderLegend(); renderAll(); renderRules();
