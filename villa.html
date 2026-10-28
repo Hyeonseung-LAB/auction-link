@@ -119,6 +119,8 @@ h1{font-size:20px;margin:0 0 3px}
 .chip.g안전.on{background:#20c997;box-shadow:inset 0 0 0 200px #20c997;border-color:#20c997}
 .bud{display:inline-flex;align-items:center;gap:8px;flex:0 0 auto;border:1.5px solid #e3e8ef;background:#fff;border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:600;color:#4e5968;white-space:nowrap}
 .bud label{cursor:pointer}
+.nfnd{font-size:14px;line-height:1.6;color:#333d4b;word-break:keep-all}
+.nfnd ul{margin:6px 0 12px;padding-left:1.1em;color:#6b7684}
 .bud .budn{width:6.4em;border:1.5px solid #e3e8ef;border-radius:8px;padding:3px 7px;font:inherit;font-size:12.5px;font-weight:700;
   color:#191f28;text-align:right;font-variant-numeric:tabular-nums;background:#f9fafb}
 .bud .budn:focus{outline:none;border-color:#3182f6;background:#fff}
@@ -854,6 +856,20 @@ function closeDetail(){var ov=document.getElementById('vdov'); if(ov)ov.classLis
   document.getElementById('vdx').addEventListener('click',closeDetail);
   ov.addEventListener('click',function(e){if(e.target===ov)closeDetail();});
   document.addEventListener('keydown',function(e){if(e.key==='Escape'&&VDP)closeDetail();});})();
+// 📋 다른 페이지(📅 일정)에서 villa.html#d=c연도-번호&pid=…&case=…&t=… 로 오면 그 물건 상세 창을 바로 연다(10/28 사장님).
+//  오늘 목록에 없으면(매각·취하·다음 기일 미정) 그렇다고 알리고 옥션원·법원경매 고르는 화면으로 잇는다
+function openFromHash(){var h=new URLSearchParams(String(location.hash||'').replace(/^#/,'')), k=h.get('d'); if(!k)return;
+  var p=P.filter(function(x){return ckey(x)===k;})[0], ov=document.getElementById('vdov');
+  if(p)openDetail(p);
+  else if(ov){VDP=null; var q=[];
+    ['pid','case','t'].forEach(function(n){if(h.get(n))q.push(n+'='+encodeURIComponent(h.get(n)));});
+    document.getElementById('vdttl').textContent=h.get('t')||h.get('case')||'관심물건';
+    document.getElementById('vdbody').innerHTML='<div class="nfnd"><p><b>오늘 빌라 목록에 없는 물건이에요.</b></p><ul>'
+      +'<li>매각·취하됐거나</li><li>유찰 뒤 다음 매각기일이 아직 안 잡혔을 수 있어요.</li></ul>'
+      +(q.length?'<div class="cacts"><a class="cact go" href="index.html?'+q.join('&')+'" target="_blank" rel="noopener">경매 정보 보기(옥션원·법원경매) →</a></div>':'')+'</div>';
+    ov.classList.add('on');}
+  try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}}
+openFromHash(); window.addEventListener('hashchange',openFromHash);   // 이미 열린 페이지에서 #만 바뀌어도
 (function(){if(!window.SheetDB)return;
   SheetDB.use().then(function(db){if(!db)return; DBX=db; var sig='';
     function upd(){var s=Object.keys(FAVS).sort().join(',')+'|'+(ACKREADY?1:0)+'|'+Object.keys(ACKS).sort().map(function(k){return k+':'+(ACKS[k].sd||'');}).join(',');
