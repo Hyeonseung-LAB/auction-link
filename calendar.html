@@ -191,6 +191,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .fld{display:grid;gap:4px;min-width:0}
 .fld label{font-size:12.5px;color:var(--muted);font-weight:600}
 .fld.wide{grid-column:1/-1}
+.bidf[hidden]{display:none}
+.bid-hint{line-height:1.6;word-break:keep-all}
+.bid-hint>div{padding-left:.8em;text-indent:-.8em}
 input.in,select.in,textarea.in{font:inherit;font-size:14px;color:var(--ink);background:var(--sheet);border:1px solid var(--rule);border-radius:4px;padding:7px 9px;width:100%;min-width:0}
 input.money-in{font-family:var(--font-num);text-align:right}
 textarea.in{min-height:64px;resize:vertical}
@@ -332,6 +335,9 @@ a.tlink:hover{color:#3182f6;text-decoration:underline}
         <div class="fld"><label for="e-appraisal">감정가</label><input class="in money-in" id="e-appraisal" inputmode="numeric" placeholder="예: 1.1억 또는 110000000" autocomplete="off"></div>
         <div class="fld"><label for="e-minPrice">최저가 (이번 회차)</label><input class="in money-in" id="e-minPrice" inputmode="numeric" placeholder="예: 3773만" autocomplete="off"></div>
         <div class="fld"><label for="e-status">상태</label><select class="in" id="e-status"></select></div>
+        <div class="fld bidf" hidden><label for="e-bid">우리 입찰가</label><input class="in money-in" id="e-bid" inputmode="numeric" placeholder="예: 4220만" autocomplete="off"></div>
+        <div class="fld bidf" hidden><label for="e-who">입찰 명의</label><select class="in" id="e-who"><option>서영</option><option>현승</option><option>공동</option></select></div>
+        <div class="fld wide bidf" hidden><div class="hint bid-hint"><div>· 저장하면 📝 입찰기록에도 적혀요.</div><div>· 매각기일 날 낙찰·패찰을 현승 텔레그램으로 알려 드려요.</div><div>· 입찰가를 비우면 낙찰가·응찰자 수만 알려 드려요.</div></div></div>
         <div class="fld"><label for="e-url">옥션원 링크 (선택)</label><input class="in" id="e-url" placeholder="https://www.auction1.co.kr/..." autocomplete="off"></div>
         <div class="fld wide"><label for="e-memo">메모</label><textarea class="in" id="e-memo" placeholder="권리분석 메모, 입찰가 후보, 확인할 것"></textarea></div>
       </div>
@@ -540,6 +546,7 @@ a.tlink:hover{color:#3182f6;text-decoration:underline}
     $('e-caseNo').value=it?.caseNo||''; $('e-court').value=it?.court||''; $('e-title').value=it?.title||'';
     $('e-appraisal').value=it?.appraisal?fmt(it.appraisal):''; $('e-minPrice').value=it?.minPrice?fmt(it.minPrice):'';
     $('e-status').value=it?.status||'관심'; $('e-url').value=it?.url||''; $('e-memo').value=it?.memo||'';
+    $('e-bid').value=it?.bid?fmt(it.bid):''; $('e-who').value=it?.who||'서영'; showBid();
     const evs=$('e-evs'); evs.innerHTML='';
     const list=it?.events?.length?it.events:[{date:presetDate||'',time:'10:00',kind:'매각기일',note:''}];
     list.forEach(ev=>evs.appendChild(evRow(ev)));
@@ -553,7 +560,36 @@ a.tlink:hover{color:#3182f6;text-decoration:underline}
   function closeEditor(){ $('editor').hidden=true; editingId=null; }
   function readEditor(){
     const events=[...$('e-evs').querySelectorAll('.ev-row')].map(r=>{ const [d,t,k,n]=r.querySelectorAll('input,select'); return {id:r.dataset.evid,date:d.value,time:t.value,kind:k.value,note:n.value.trim()}; }).filter(e=>e.date||e.note);
-    return {caseNo:$('e-caseNo').value.trim(),court:$('e-court').value.trim(),title:$('e-title').value.trim(),appraisal:parseWon($('e-appraisal').value),minPrice:parseWon($('e-minPrice').value),status:$('e-status').value,url:$('e-url').value.trim(),memo:$('e-memo').value.trim(),events,updatedAt:new Date().toISOString()};
+    return {caseNo:$('e-caseNo').value.trim(),court:$('e-court').value.trim(),title:$('e-title').value.trim(),appraisal:parseWon($('e-appraisal').value),minPrice:parseWon($('e-minPrice').value),status:$('e-status').value,url:$('e-url').value.trim(),memo:$('e-memo').value.trim(),events,updatedAt:new Date().toISOString(),
+      ...(parseWon($('e-bid').value)?{bid:parseWon($('e-bid').value),who:$('e-who').value}:{})};
+  }
+  // 📝 우리 입찰가 → 입찰기록(10/29 사장님) — 상태가 입찰 예정·완료이고 입찰가·사건번호·매각기일이 있으면 입찰기록에
+  //  그 매각기일로 한 줄(id 'cal-<캘린더 id>-<날짜>', 봇 bid_watch 와 같은 이름). 결과는 봇이 매각기일 날 채우고 알린다.
+  //  같은 사건·같은 날 줄이 이미 있으면(입찰기록에서 손으로 적음) 그 줄을 고친다. 결과가 적힌 줄은 안 건드린다.
+  //  입찰가를 지우거나 상태를 관심 등으로 바꾸면, 캘린더가 적은 줄 중 아직 '대기'이고 지나지 않은 것은 뺀다.
+  const BID_ST=new Set(['입찰 예정','입찰 완료']);
+  function showBid(){ const on=BID_ST.has($('e-status').value)||!!parseWon($('e-bid').value); document.querySelectorAll('.bidf').forEach(x=>{ x.hidden=!on; }); }
+  const bidDay=it=>{ const ds=(it.events||[]).filter(e=>e.kind==='매각기일'&&parseYmd(e.date)).map(e=>e.date).sort(); return ds.find(d=>d>=todayStr)||ds[ds.length-1]||''; };
+  async function syncBid(id,it){
+    const col=db.collection('bids'), docs=(await col.get()).docs.filter(d=>d.exists).map(d=>({id:d.id,...(d.data()||{})}));
+    const ck=ckeyOf(it.caseNo), day=bidDay(it), want=!!(BID_ST.has(it.status)&&it.bid>0&&ck&&day);
+    const stale=docs.filter(d=>d.id.startsWith('cal-'+id+'-')&&(d.result||'대기')==='대기'&&String(d.date||'')>=todayStr&&!(want&&d.date===day));
+    for(const d of stale){ try{ await col.doc(d.id).delete(); }catch(e){} }
+    if(!want){
+      if(BID_ST.has(it.status)&&it.bid>0) return ck?'저장했어요. 매각기일을 넣어야 📝 입찰기록에 적혀요':'저장했어요. 사건번호가 있어야 📝 입찰기록에 적혀요';
+      return stale.length?'저장했어요. 📝 입찰기록에서 뺐어요':'';
+    }
+    const old=docs.find(d=>d.date===day&&ckeyOf(d.case)===ck);
+    if(old&&old.result&&old.result!=='대기') return '';
+    const prev=old?{...old}:{}; delete prev.id;
+    const doc={...prev,date:day,case:it.caseNo,court:it.court||prev.court,title:it.title||prev.title,kind:prev.kind||'빌라',
+      who:it.who||prev.who||'서영',method:prev.method||'대리',result:'대기',appraisal:it.appraisal||prev.appraisal,
+      min:it.minPrice||prev.min,bid:it.bid,note:old?prev.note:'캘린더에서 옮김'};
+    Object.keys(doc).forEach(k=>{ if(doc[k]==null||doc[k]==='') delete doc[k]; });
+    if(old&&['date','case','court','title','who','appraisal','min','bid','result'].every(k=>String(prev[k]??'')===String(doc[k]??''))) return '';
+    doc.updated=new Date().toISOString();
+    await col.doc(old?old.id:'cal-'+id+'-'+day).set(doc);
+    return old?'저장했어요. 📝 입찰기록도 고쳤어요':'저장했어요. 📝 입찰기록에도 적었어요';
   }
   function errMsg(e){
     const c=e&&e.code;
@@ -574,10 +610,12 @@ a.tlink:hover{color:#3182f6;text-decoration:underline}
     try{
       if(editingId){ await db.collection('items').doc(editingId).set(body); }
       else { const ref=db.collection('items').doc(); await ref.set(body); editingId=ref.id; }
+      let bidNote='';
+      try{ bidNote=await syncBid(editingId,body); }catch(err){ bidNote='저장했어요. 📝 입찰기록에는 못 적었어요(입찰기록에서 직접 적어 주세요)'; }
       const first=body.events.find(x=>parseYmd(x.date));
       if(first){ sel=first.date; const d=parseYmd(first.date); viewY=d.getFullYear(); viewM=d.getMonth(); }
       closeEditor(); renderAll();
-      toast(body.events.some(x=>parseYmd(x.date))?'저장했어요. 달력에 표시했어요':'저장했어요. 날짜를 넣으면 달력에 나와요');
+      toast(bidNote||(body.events.some(x=>parseYmd(x.date))?'저장했어요. 달력에 표시했어요':'저장했어요. 날짜를 넣으면 달력에 나와요'));
     }catch(err){ $('e-msg').textContent=errMsg(err); $('e-msg').className='msg bad'; }
     finally{ $('e-save').disabled=false; }
   });
@@ -586,10 +624,11 @@ a.tlink:hover{color:#3182f6;text-decoration:underline}
   $('e-delete').addEventListener('click',async e=>{
     const b=e.currentTarget;
     if(b.dataset.armed!=='1'){ b.dataset.armed='1'; b.textContent='정말 삭제할까요? 한 번 더 누르기'; b.classList.add('armed'); setTimeout(()=>{ if(b.dataset.armed==='1'){ b.dataset.armed=''; b.textContent='이 물건 삭제'; b.classList.remove('armed'); } },4000); return; }
-    try{ await db.collection('items').doc(editingId).delete(); closeEditor(); toast('삭제했어요'); }
+    try{ const id=editingId; await db.collection('items').doc(id).delete(); closeEditor(); toast('삭제했어요'); try{ await syncBid(id,{status:'종료'}); }catch(e){} }
     catch(err){ $('e-msg').textContent='삭제하지 못했어요. 잠시 뒤 다시 눌러주세요.'; $('e-msg').className='msg bad'; }
   });
-  document.addEventListener('focusout',e=>{ const t=e.target; if(t&&(t.id==='e-appraisal'||t.id==='e-minPrice')){ const v=parseWon(t.value); t.value=v?fmt(v):''; } });
+  document.addEventListener('focusout',e=>{ const t=e.target; if(t&&(t.id==='e-appraisal'||t.id==='e-minPrice'||t.id==='e-bid')){ const v=parseWon(t.value); t.value=v?fmt(v):''; } });
+  $('e-status').addEventListener('change',showBid);
 
   document.addEventListener('click',e=>{
     const rm=e.target.closest('[data-rm-ev]'); if(rm){ rm.closest('.ev-row').remove(); return; }
