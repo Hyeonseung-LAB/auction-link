@@ -82,6 +82,15 @@ button{font:inherit;color:inherit}
 .empty{padding:18px 4px;color:var(--t3);font-size:13.5px;line-height:1.6}
 .more{display:block;width:100%;margin-top:8px;border:0;background:#f2f4f6;border-radius:10px;padding:10px;font-size:13.5px;font-weight:700;color:var(--t2);cursor:pointer}
 .foot{font-size:11.5px;color:var(--t3);line-height:1.7;margin-top:22px}
+/* 🗺 후보 지도(11/2) */
+.hmc{padding:8px}
+.hmap{height:62vh;min-height:340px;border-radius:12px;overflow:hidden;background:#e8ecef}
+.hmc .legend{padding:2px 6px 4px;gap:10px}
+.hpin{font-size:12px;font-weight:800;color:#fff;background:var(--ink);border-radius:8px;padding:3px 7px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.hmap.leaflet-container{font-family:inherit}
+.hpop{font-size:13px;line-height:1.5;min-width:180px;word-break:keep-all}
+.hpop b{font-size:14px}
+.hpop .go{display:inline-block;margin-top:6px;font-weight:800;color:var(--s1)}
 /* 📊 흐름 비교(11/2) */
 .cchips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 2px}
 .cml{margin-top:6px}
@@ -119,7 +128,7 @@ const BASE = 'market/';
 let SUM = null;                       // summary.json
 let WEEK;                              // week.json(📰 이번 주 신고분) — 없으면 null
 const DET = {};                       // 구코드 → 상세 json
-const st = {k:'apt', f:'전체', o:'c3', r:null, d:null, x:null, a:null, all:false, cmp:[], cw:''};
+const st = {k:'apt', f:'전체', o:'c3', r:null, d:null, x:null, a:null, all:false, cmp:[], cw:'', hv:''};
 const KIND = {apt:'아파트', rh:'빌라'};
 const SORTS = [['c3','3개월'],['c12','12개월'],['peak','전고점 대비'],['vol','거래 증감'],['jr','전세가율'],['m2','㎡당 가격']];
 const INFO = {
@@ -181,11 +190,11 @@ const defO = k => k==='rh' ? 'c12' : 'c3';   // 빌라는 6개월 묶음이라 �
 function readHash(){ const p=new URLSearchParams(location.hash.slice(1));
   st.k = p.get('k')==='rh' ? 'rh' : 'apt'; st.f = p.get('f')||'전체'; st.o = p.get('o')||defO(st.k);
   st.r = p.get('r'); st.d = p.get('d'); st.x = p.get('x'); st.a = p.get('a'); st.v = p.get('v');
-  st.cmp=(p.get('cmp')||'').split(',').filter(c=>/^\d{5}$/.test(c)).slice(0,3); st.cw=['3y','1y'].includes(p.get('cw'))?p.get('cw'):''; }
+  st.cmp=(p.get('cmp')||'').split(',').filter(c=>/^\d{5}$/.test(c)).slice(0,3); st.cw=['3y','1y'].includes(p.get('cw'))?p.get('cw'):''; st.hv=p.get('hv')==='map'?'map':''; }
 function go(ch){ if('r' in ch || 'd' in ch){ st.all=false; st.wall=false; } Object.assign(st, ch); const p=new URLSearchParams();
   if(st.k!=='apt') p.set('k',st.k); if(st.f!=='전체') p.set('f',st.f); if(st.o!==defO(st.k)) p.set('o',st.o);
   for(const k of ['v','r','d','x','a']) if(st[k]) p.set(k,st[k]);
-  if(st.cmp&&st.cmp.length) p.set('cmp',st.cmp.join(',')); if(st.cw) p.set('cw',st.cw);
+  if(st.cmp&&st.cmp.length) p.set('cmp',st.cmp.join(',')); if(st.cw) p.set('cw',st.cw); if(st.hv) p.set('hv',st.hv);
   const h='#'+p.toString(); if(location.hash!==h) location.hash=h; else render(); }
 window.addEventListener('hashchange', ()=>{
   // 🔑 열린 페이지에서 열쇠 링크(#k2=…)를 열면 새로 읽어야 sheetdb.js 가 열쇠를 받아 넣고 주소창에서 지운다(11/2)
@@ -529,6 +538,8 @@ async function renderHome(app){
       <label>1년 거래<select data-c="minN">${opt(c.minN||0,[[0,'상관없음'],[3,'3건 이상'],[6,'6건 이상'],[12,'12건 이상']])}</select></label>
     </div><div class="saved" id="csaved">${CKEY?'':'🔑 이 기기엔 두 번째 열쇠가 없어요<br>바꾼 조건은 이 화면에서만 쓰고 저장 안 돼요'}</div></div>
     <div class="lab">후보 ${rows.length.toLocaleString()}곳 · ${esc(P0.name)}</div>
+    <div class="chips"><button class="chip ${st.hv?'':'on'}" data-hv="">📋 목록</button><button class="chip ${st.hv?'on':''}" data-hv="map">🗺 지도</button></div>
+    ${st.hv?`<div class="card hmc"><div class="hmap" id="hmap"></div><div class="legend" id="hleg"></div></div>`:`
     <div class="chips">${[['dist','가까운 순'],['cheap','싼 순'],['deal','거래 많은 순'],['new','새 아파트 순'],['drop','최고가보다 많이 내린 순']].map(([k,t])=>`<button class="chip ${(c.sort||'dist')===k?'on':''}" data-sort="${k}">${t}</button>`).join('')}</div>
     <div class="card">${show.map(x=>{ const r=x.r, b=x.b, dr=b[0]/b[2]-1;
       return `<div class="row" data-h="${r[0]}|${esc(r[1])}|${esc(r[2])}|${x.bd}"><div class="a"><div class="n">${esc(r[3])}</div>
@@ -536,8 +547,8 @@ async function renderHome(app){
         <div class="m">${r[11]?nw('🚌 '+esc(r[11])+' 약 '+x.bw+'분'):(r[12]===-1?nw('🚌 가까운 정류장 없음'):(r[0].startsWith('28')?'':nw('🚌 확인 중')))}</div>
         <div class="m">${nw('🏢 '+esc(x.to)+' '+x.dist.toFixed(1)+'km')}${b[3]?' · '+nw('전세가율 '+b[3]+'%'):''}</div></div>
         <div class="b"><div class="p">${nw(x.bd+'㎡대 '+man(b[0]))}</div><div class="m">${nw('1년 '+b[1]+'건')}</div><div class="m">${nw('최고가 대비 ')}${pctH(dr,0)}</div></div></div>`; }).join('')||'<div class="empty">조건에 맞는 단지가 없어요.<br>조건을 넓혀 보세요.</div>'}
-      ${rows.length>show.length?`<button class="more" id="more">${(rows.length-show.length).toLocaleString()}곳 더 보기</button>`:''}</div>
-    <div class="foot">· 값은 최근 12개월 중개거래 중위가예요(직거래 빼고).<br>· 역까지 걸어서 = 가까운 지하철역 직선거리로 어림한 값(추정)이에요.<br>· 버스도 가까운 정류장 직선거리로 어림해요.<br>· 경기 단지 버스는 하루 1,000곳씩 채우는 중이라 '확인 중'이 보일 수 있어요.<br>· 인천은 버스 자료가 없어요.<br>· 조건은 우리 구글 시트에만 저장돼요.<br>· 조건은 두 번째 열쇠가 있는 기기에서만 보이고 저장돼요.</div>`;
+      ${rows.length>show.length?`<button class="more" id="more">${(rows.length-show.length).toLocaleString()}곳 더 보기</button>`:''}</div>`}
+    <div class="foot">· 값은 최근 12개월 중개거래 중위가예요(직거래 빼고).<br>· 역까지 걸어서 = 가까운 지하철역 직선거리로 어림한 값(추정)이에요.<br>· 버스도 가까운 정류장 직선거리로 어림해요.<br>· 경기 단지 버스는 하루 1,000곳씩 채우는 중이라 '확인 중'이 보일 수 있어요.<br>· 인천은 버스 자료가 없어요.<br>· 조건은 우리 구글 시트에만 저장돼요.<br>· 조건은 두 번째 열쇠가 있는 기기에서만 보이고 저장돼요.<br>· 지도 바탕은 오픈스트리트맵이에요(근무지는 이 화면에서만 그려요).</div>`;
   app.querySelector('#bk').onclick=()=>go({v:null});
   app.querySelectorAll('[data-plan]').forEach(b=>b.onclick=()=>{ c.plan=+b.dataset.plan; saveCond(); render(); });
   app.querySelectorAll('[data-sort]').forEach(b=>b.onclick=()=>{ c.sort=b.dataset.sort; saveCond(); render(); });
@@ -545,7 +556,52 @@ async function renderHome(app){
     const n=v===''?null:(isNaN(+v)?v:+v);
     if(k==='km') P0.km=n; else c[k]=n; saveCond(); render(); });
   const mb=app.querySelector('#more'); if(mb) mb.onclick=()=>{ st.all=true; render(); };
+  app.querySelectorAll('[data-hv]').forEach(x=>x.onclick=()=>go({hv:x.dataset.hv}));
+  if(st.hv) drawHomeMap(app.querySelector('#hmap'), app.querySelector('#hleg'), rows, P0);
   app.querySelectorAll('[data-h]').forEach(r=>r.onclick=()=>{ const [sgg,u,j,bd]=r.dataset.h.split('|'); go({v:null, r:sgg, d:u, x:j, a:bd}); });
+}
+
+// 🗺 후보 지도(11/2) — 오픈스트리트맵 바탕(Leaflet, 열 때만 불러옴) + 단지마다 점 하나 + 근무지·반경.
+//  근무지 좌표는 시트에서 읽어 이 화면에서만 그린다(공개 파일엔 없음). 역·노선은 바탕 지도에 나온다.
+const LEAF='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/';
+let leafP=null;
+function loadLeaflet(){ if(window.L&&window.L.map) return Promise.resolve(window.L); if(leafP) return leafP;
+  leafP=new Promise((ok,no)=>{ const c=document.createElement('link'); c.rel='stylesheet'; c.href=LEAF+'leaflet.min.css'; document.head.appendChild(c);
+    const s=document.createElement('script'); s.src=LEAF+'leaflet.min.js'; s.onload=()=>ok(window.L); s.onerror=()=>{ leafP=null; no(new Error('지도 못 불러옴')); };
+    document.head.appendChild(s); });
+  return leafP; }
+async function drawHomeMap(el, leg, rows, plan){
+  if(!el) return;
+  el.innerHTML='<div class="empty">지도 불러오는 중…</div>';
+  let L; try{ L=await loadLeaflet(); }catch(e){ el.innerHTML='<div class="empty">지도를 못 불러왔어요.<br>목록으로 보세요.</div>'; return; }
+  if(!el.isConnected) return;                       // 그새 다른 화면으로 갔다
+  el.innerHTML='';
+  const map=L.map(el,{preferCanvas:true});
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18, attribution:'© OpenStreetMap'}).addTo(map);
+  // 단지 하나에 점 하나 — 59·84 둘 다 맞으면 한 점에 두 줄
+  const by=new Map(); for(const x of rows){ const k=x.r[0]+'|'+x.r[1]+'|'+x.r[2]; if(!by.has(k)) by.set(k,{r:x.r, xs:[]}); by.get(k).xs.push(x); }
+  const cs=[...by.values()]; cs.forEach(c=>c.p=Math.min(...c.xs.map(x=>x.b[0])));
+  const ps=cs.map(c=>c.p).sort((a,b)=>a-b), q1=ps[Math.floor((ps.length-1)/3)], q2=ps[Math.floor((ps.length-1)*2/3)];
+  const COL=['#16a34a','#f59e0b','#e34948'], tier=v=>v<=q1?0:v<=q2?1:2;
+  const pts=[];
+  for(const c of cs){ const r=c.r; pts.push([r[5],r[4]]);
+    const lines=c.xs.sort((a,b)=>a.bd-b.bd).map(x=>`${x.bd}㎡대 <b>${man(x.b[0])}</b> · 1년 ${x.b[1]}건 · 최고가 대비 ${pct(x.b[0]/x.b[2]-1,0)}`).join('<br>');
+    const html=`<div class="hpop"><b>${esc(r[3])}</b><br>${esc(r[1])}${r[6]?' · '+r[6]+'년':''}`
+      +`${r[7]?'<br>🚇 '+esc(r[7].replace(/ .*$/,''))+' 약 '+c.xs[0].w+'분':''}${r[11]?'<br>🚌 '+esc(r[11])+' 약 '+c.xs[0].bw+'분':''}`
+      +`<br>🏢 ${esc(c.xs[0].to)} ${c.xs[0].dist.toFixed(1)}km<br>${lines}`
+      +`<br><a href="#" class="go" data-go="${r[0]}|${esc(r[1])}|${esc(r[2])}|${c.xs[0].bd}">단지 보기 →</a></div>`;
+    L.circleMarker([r[5],r[4]],{radius:cs.length>300?5:6.5, color:'#fff', weight:1.5, fillColor:COL[tier(c.p)], fillOpacity:.92}).bindPopup(html).addTo(map); }
+  const pins=[];
+  for(const p of (plan.pts||[])){ pts.push([p.lat,p.lng]);
+    const near=pins.some(q=>km([q.lng,q.lat],[p.lng,p.lat])<3); pins.push(p);   // 기흥·화성처럼 가까우면 이름표를 점 아래로
+    L.circle([p.lat,p.lng],{radius:(plan.km||10)*1000, color:'#191f28', weight:1.2, dashArray:'5 5', fill:false, interactive:false}).addTo(map);
+    L.marker([p.lat,p.lng],{icon:L.divIcon({className:'', html:`<span class="hpin">🏢 ${esc(p.n)}</span>`, iconSize:null, iconAnchor:near?[14,-8]:[14,12]}), zIndexOffset:1000}).addTo(map); }
+  if(pts.length) map.fitBounds(pts,{padding:[24,24], maxZoom:14}); else map.setView([37.55,126.99],10);
+  map.on('popupopen', e=>{ const a=e.popup.getElement().querySelector('[data-go]'); if(a) a.onclick=ev=>{ ev.preventDefault();
+    const [sgg,u,j,bd]=a.dataset.go.split('|'); go({v:null, r:sgg, d:u, x:j, a:bd}); }; });
+  el.dataset.n=cs.length; el.__map=map;             // 시험용: 찍은 단지 수·지도
+  if(leg) leg.innerHTML=cs.length?[[0,`싼 편(${eok(q1)} 이하)`],[1,'중간'],[2,`비싼 편(${eok(q2)} 넘게)`]].map(([i,t])=>`<span><i style="background:${COL[i]}"></i>${nw(t)}</span>`).join('')
+    +`<span>${nw('🏢 근무지 · 점선 '+(plan.km||10)+'km')}</span><span>${nw('점 '+cs.length.toLocaleString()+'곳')}</span>`:'<span>조건에 맞는 단지가 없어요</span>';
 }
 
 function renderList(app){
