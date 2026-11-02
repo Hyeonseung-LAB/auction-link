@@ -169,7 +169,10 @@ function go(ch){ if('r' in ch || 'd' in ch){ st.all=false; st.wall=false; } Obje
   if(st.k!=='apt') p.set('k',st.k); if(st.f!=='전체') p.set('f',st.f); if(st.o!==defO(st.k)) p.set('o',st.o);
   for(const k of ['v','r','d','x','a']) if(st[k]) p.set(k,st[k]);
   const h='#'+p.toString(); if(location.hash!==h) location.hash=h; else render(); }
-window.addEventListener('hashchange', ()=>{ readHash(); render(); window.scrollTo(0,0); });
+window.addEventListener('hashchange', ()=>{
+  // 🔑 열린 페이지에서 열쇠 링크(#k2=…)를 열면 새로 읽어야 sheetdb.js 가 열쇠를 받아 넣고 주소창에서 지운다(11/2)
+  if(/(^#|&)k2=/.test(location.hash)){ location.reload(); return; }
+  readHash(); render(); window.scrollTo(0,0); });
 
 async function getJSON(u){ const r=await fetch(u,{cache:'no-cache'}); if(!r.ok) throw new Error(r.status); return r.json(); }
 async function det(code){ if(!DET[code]) DET[code]=await getJSON(`${BASE}r/${code}.json`); return DET[code]; }
@@ -379,7 +382,9 @@ function weekRegion(code){
 
 // ── 🏠 내 집 후보(11/2 3단계) ────────────────────────────────
 // 조건(예산·근무지·거리…)은 구글 시트 notes/home-conditions 에만. 공개 파일(homes.json)엔 시장 숫자만 있다.
-let HOMES=null, COND=null, CDB=null, csave=null;
+let HOMES=null, COND=null, CDB=null, csave=null, CKEY=false;
+// 🔑 두 번째 열쇠(11/2) — 조건은 개인 값이라 열쇠 있는 기기만 읽힌다. 열쇠 없는 기기는 시트에 안 쓴다(못 읽은 걸 빈 값으로 덮어쓰지 않게)
+const canSave=()=>{ const S=window.SheetDB; return !!S&&(S.MOCK||(typeof S.hasKey==='function'?S.hasKey():true)); };   // 옛 sheetdb.js(열쇠 없던 판)면 예전처럼
 const HB={59:9, 84:10};                       // homes.json 줄에서 평형대 칸 위치
 function km(a,b){ const R=6371, t=x=>x*Math.PI/180, dl=t(b[1]-a[1]), dn=t(b[0]-a[0]);
   const h=Math.sin(dl/2)**2+Math.cos(t(a[1]))*Math.cos(t(b[1]))*Math.sin(dn/2)**2; return 2*R*Math.asin(Math.sqrt(h)); }
@@ -387,11 +392,12 @@ const walkMin = m => m==null?null:Math.max(1,Math.round(m*1.3/67));   // 직선�
 async function loadHome(){
   if(!HOMES) HOMES=await getJSON(BASE+'homes.json');
   if(COND===null){
-    try{ CDB=await SheetDB.use(); const s=CDB?await CDB.doc('notes/home-conditions').get():null; COND=(s&&s.exists)?(s.data()||{}):{}; }
+    try{ CDB=await SheetDB.use(); CKEY=!!CDB&&canSave(); const s=CDB?await CDB.doc('notes/home-conditions').get():null; COND=(s&&s.exists)?(s.data()||{}):{}; }
     catch(e){ COND={}; }
   }
 }
-function saveCond(){ const el=document.getElementById('csaved'); if(el) el.textContent='저장 중…';
+function saveCond(){ if(!CKEY) return;   // 열쇠 없는 기기 — 화면에서만 쓴다
+  const el=document.getElementById('csaved'); if(el) el.textContent='저장 중…';
   clearTimeout(csave); csave=setTimeout(async()=>{ const e2=document.getElementById('csaved');
     try{ if(!CDB) throw new Error('시트 연결 안 됨'); await CDB.doc('notes/home-conditions').set(COND); if(e2) e2.textContent='✓ 조건 저장됨(우리 구글 시트)'; }
     catch(e){ if(e2) e2.textContent='저장 못 했어요 — '+e.message; } }, 700); }
@@ -418,7 +424,10 @@ async function renderHome(app){
   await loadHome();
   const c=COND, nav=`<div class="nav"><button class="back" id="bk">← 시장 온도계</button></div>`;
   if(!c.plans||!c.plans.length){
-    app.innerHTML=nav+`<div class="head"><h1>🏠 내 집 후보</h1></div><div class="card"><div class="empty">조건이 아직 없어요.<br>예산·근무지는 우리 구글 시트에만 두고 여기서 읽어요.<br>시트에 연결이 안 되면 이 화면을 못 써요.</div></div>`;
+    const why=!CDB?'구글 시트에 연결이 안 돼요.<br>조건(예산·근무지)은 시트에만 있어서 연결돼야 보여요.<br>잠시 뒤 다시 열어 보세요.'
+      :!CKEY?'🔑 이 기기엔 두 번째 열쇠가 없어요.<br>조건(예산·근무지)은 개인 값이라 열쇠가 있는 기기에서만 보여요.<br>사장님 열쇠 링크를 이 기기에서 한 번 열어 주세요.'
+      :'조건이 아직 없어요.<br>예산·근무지는 우리 구글 시트에만 두고 여기서 읽어요.';
+    app.innerHTML=nav+`<div class="head"><h1>🏠 내 집 후보</h1></div><div class="card"><div class="empty">${why}</div></div>`;
     app.querySelector('#bk').onclick=()=>go({v:null}); return; }
   const rows=homeRows(), show=st.all?rows:rows.slice(0,40);
   const opt=(v,list)=>list.map(([x,t])=>`<option value="${x}"${String(v)===String(x)?' selected':''}>${t}</option>`).join('');
@@ -433,7 +442,7 @@ async function renderHome(app){
       <label>버스까지 걸어서<select data-c="bwalk">${opt(c.bwalk||'',[[3,'3분 안'],[5,'5분 안'],[10,'10분 안'],['','상관없음']])}</select></label>
       <label>연식<select data-c="age">${opt(c.age||'',[[5,'5년 안'],[10,'10년 안'],[15,'15년 안'],[20,'20년 안'],[30,'30년 안'],['','상관없음']])}</select></label>
       <label>1년 거래<select data-c="minN">${opt(c.minN||0,[[0,'상관없음'],[3,'3건 이상'],[6,'6건 이상'],[12,'12건 이상']])}</select></label>
-    </div><div class="saved" id="csaved"></div></div>
+    </div><div class="saved" id="csaved">${CKEY?'':'🔑 이 기기엔 두 번째 열쇠가 없어요<br>바꾼 조건은 이 화면에서만 쓰고 저장 안 돼요'}</div></div>
     <div class="lab">후보 ${rows.length.toLocaleString()}곳 · ${esc(P0.name)}</div>
     <div class="chips">${[['dist','가까운 순'],['cheap','싼 순'],['deal','거래 많은 순'],['new','새 아파트 순'],['drop','최고가보다 많이 내린 순']].map(([k,t])=>`<button class="chip ${(c.sort||'dist')===k?'on':''}" data-sort="${k}">${t}</button>`).join('')}</div>
     <div class="card">${show.map(x=>{ const r=x.r, b=x.b, dr=b[0]/b[2]-1;
@@ -443,7 +452,7 @@ async function renderHome(app){
         <div class="m">${nw('🏢 '+esc(x.to)+' '+x.dist.toFixed(1)+'km')}${b[3]?' · '+nw('전세가율 '+b[3]+'%'):''}</div></div>
         <div class="b"><div class="p">${nw(x.bd+'㎡대 '+man(b[0]))}</div><div class="m">${nw('1년 '+b[1]+'건')}</div><div class="m">${nw('최고가 대비 ')}${pctH(dr,0)}</div></div></div>`; }).join('')||'<div class="empty">조건에 맞는 단지가 없어요.<br>조건을 넓혀 보세요.</div>'}
       ${rows.length>show.length?`<button class="more" id="more">${(rows.length-show.length).toLocaleString()}곳 더 보기</button>`:''}</div>
-    <div class="foot">· 값은 최근 12개월 중개거래 중위가예요(직거래 빼고).<br>· 역까지 걸어서 = 가까운 지하철역 직선거리로 어림한 값(추정)이에요.<br>· 버스도 가까운 정류장 직선거리로 어림해요.<br>· 경기 단지 버스는 하루 1,000곳씩 채우는 중이라 '확인 중'이 보일 수 있어요.<br>· 인천은 버스 자료가 없어요.<br>· 조건은 우리 구글 시트에만 저장돼요.</div>`;
+    <div class="foot">· 값은 최근 12개월 중개거래 중위가예요(직거래 빼고).<br>· 역까지 걸어서 = 가까운 지하철역 직선거리로 어림한 값(추정)이에요.<br>· 버스도 가까운 정류장 직선거리로 어림해요.<br>· 경기 단지 버스는 하루 1,000곳씩 채우는 중이라 '확인 중'이 보일 수 있어요.<br>· 인천은 버스 자료가 없어요.<br>· 조건은 우리 구글 시트에만 저장돼요.<br>· 조건은 두 번째 열쇠가 있는 기기에서만 보이고 저장돼요.</div>`;
   app.querySelector('#bk').onclick=()=>go({v:null});
   app.querySelectorAll('[data-plan]').forEach(b=>b.onclick=()=>{ c.plan=+b.dataset.plan; saveCond(); render(); });
   app.querySelectorAll('[data-sort]').forEach(b=>b.onclick=()=>{ c.sort=b.dataset.sort; saveCond(); render(); });
@@ -589,13 +598,15 @@ let ADB=null;
 async function askDB(){ if(ADB===null){ try{ ADB=(CDB||await SheetDB.use())||false; }catch(e){ ADB=false; } } return ADB||null; }
 async function askLoad(){ const db=await askDB(); if(!db) return {}; try{ const s=await db.doc('notes/asks').get(); return (s.exists&&s.data())||{}; }catch(e){ return {}; } }
 async function askSave(key, rec){ const db=await askDB(); if(!db) throw new Error('시트 연결 안 됨');
+  if(!canSave()) throw Object.assign(new Error('열쇠 없음'), {code:'nokey'});
   const all=await askLoad(); const list=(all[key]||[]).filter(x=>x.at!==rec.at); list.unshift(rec); all[key]=list.slice(0,10);
   await db.doc('notes/asks').set(all); return all[key]; }
 async function askRemove(key, at){ const db=await askDB(); if(!db) return [];
+  if(!canSave()) return (await askLoad())[key]||[];
   const all=await askLoad(); all[key]=(all[key]||[]).filter(x=>x.at!==at); if(!all[key].length) delete all[key];
   await db.doc('notes/asks').set(all); return all[key]||[]; }
 function askListHtml(list){ if(!list||!list.length) return '';
-  return '<div class="lab" style="margin-top:12px">넣어 본 값</div>'+list.map(x=>`<div class="row" style="cursor:default"><div class="a"><div class="n">${nw(man(x.v))}${x.fl?' · '+(x.fl==='low'?'1~3층':'4층 이상'):''}</div><div class="m">${nw(esc(x.at.slice(0,10)))} · ${esc(x.verdict||'')}</div></div><div class="b"><button class="home" data-del="${esc(x.at)}">✕</button></div></div>`).join(''); }
+  return '<div class="lab" style="margin-top:12px">넣어 본 값</div>'+list.map(x=>`<div class="row" style="cursor:default"><div class="a"><div class="n">${nw(man(x.v))}${x.fl?' · '+(x.fl==='low'?'1~3층':'4층 이상'):''}</div><div class="m">${nw(esc(x.at.slice(0,10)))} · ${esc(x.verdict||'')}</div></div><div class="b">${canSave()?`<button class="home" data-del="${esc(x.at)}">✕</button>`:''}</div></div>`).join(''); }
 
 async function renderComplex(app){
   const g=SUM.regions.find(x=>x.c===st.r); const D=await det(st.r);
@@ -630,7 +641,9 @@ async function renderComplex(app){
       const j=judgeAsk(P.p, v, fl); out.innerHTML=askHtml(j, v);
       const verdict=(out.querySelector('.verd')||{}).textContent||'';
       try{ lst.innerHTML=askListHtml(await askSave(key, {v, fl, verdict, at:new Date().toISOString().slice(0,19)})); bindDel(); }
-      catch(e){ out.insertAdjacentHTML('beforeend', '<div class="muted">· 시트에 못 적었어요('+esc(e.message)+')</div>'); } }; }
+      catch(e){ out.insertAdjacentHTML('beforeend', e.code==='nokey'
+        ?'<div class="muted">· 🔑 이 기기엔 두 번째 열쇠가 없어 시트에 안 적었어요<br>· 사장님 열쇠 링크를 이 기기에서 한 번 열면 적혀요</div>'
+        :'<div class="muted">· 시트에 못 적었어요('+esc(e.message)+')</div>'); } }; }
   scatter(app.querySelector('#c-sc'), [
       // 그리는 순서 = 겹칠 때 위로 오는 순서(전세 → 직거래 → 매매 → 🔥 신고가)
       {name:'전세', color:'var(--s2)', pts:P.r, r:3, op:.6},

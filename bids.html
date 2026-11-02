@@ -295,6 +295,7 @@ $("form").addEventListener("submit", async e=>{
     $("form").hidden=true; editing=null;
   }catch(err){
     $("formMsg").textContent = err&&err.code==="invalid_argument" ? "이 기록장을 고칠 권한이 없어요(보기만 가능)."
+      : err&&err.code==="k2" ? "이 기기엔 두 번째 열쇠가 없어 저장하지 못했어요. 사장님이 보낸 열쇠 링크를 한 번 열어 주세요."
       : err&&err.code==="quota_exceeded" ? "기록장이 가득 찼어요. 오래된 기록을 지운 뒤 다시 저장해 주세요."
       : "저장하지 못했어요. 잠시 뒤 다시 눌러 주세요.";
   }finally{ $("saveBtn").disabled=false; }

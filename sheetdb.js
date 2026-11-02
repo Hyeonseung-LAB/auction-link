@@ -12,12 +12,16 @@
  * · 다른 사람이 고친 것은 화면을 다시 볼 때(탭 전환·폰 켜기)와 1분마다 받아 온다.
  * · 저장은 화면에 먼저 반영하고 시트로 보낸다. 실패하면 되돌리고 오류를 낸다(페이지가 안내).
  * · API 주소가 비어 있거나 주소창에 ?mock=1 이면 이 기기에만 저장하는 시험 모드.
+ * · 🔑 두 번째 열쇠(11/2 사장님): 개인 값 읽기와 모든 저장은 두 번째 열쇠(K2)가 있어야 된다. 이 파일엔 없고,
+ *   두 폰·PC 가 '…html#k2=열쇠' 링크를 한 번 열면 기기 저장소에 남는다(주소창에선 바로 지운다).
+ *   열쇠 없이 저장하면 한 번 물어본다. 열쇠가 없는 방문자는 공개 보기(개인 값 빠짐)만 받는다.
  */
 (function () {
   // 앱스 스크립트 웹앱 주소 — 사장님 구글 시트 '경매 데이터'(10/23 배포)
   const API = 'https://script.google.com/macros/s/AKfycbxzqgv3iy5PxAp7n6pvFPfLwdR27HLjimkOL7tUZ_DlPV0G7C56p9SGpn30sWHzA3XDrQ/exec';
   const KEY = '_fCysFJKdJX8agbA';       // Code.gs 의 KEY 와 같아야 한다
   const CACHE = 'sheetdb-cache-v1';
+  const K2_STORE = 'sheetdb-k2-v1';
   const MOCK = !API || /[?&]mock=1/.test(location.search);
   const POLL_MS = 60000;
 
@@ -25,6 +29,33 @@
   let fresh = false;                    // 시트에서 한 번이라도 받아 왔나(아니면 기기에 남은 사본)
   let loading = null;
   const subs = new Set();               // 화면 갱신 함수들
+
+  // 🔑 두 번째 열쇠 — 주소창 #k2=… 로 한 번 넣으면 기기에 남긴다(주소창·방문 기록에서는 바로 지운다)
+  function readK2() { try { return localStorage.getItem(K2_STORE) || ''; } catch (e) { return ''; } }
+  function saveK2(v) { try { if (v) localStorage.setItem(K2_STORE, v); else localStorage.removeItem(K2_STORE); } catch (e) { /* 저장 공간 없음 */ } }
+  let k2 = readK2();
+  (function takeK2FromHash() {
+    const m = /(?:^#|&)k2=([A-Za-z0-9_\-]{16,})/.exec(location.hash || '');
+    if (!m) return;
+    k2 = m[1]; saveK2(k2);
+    const rest = (location.hash || '').replace(/(^#|&)k2=[^&]*/, '$1').replace(/^#&/, '#').replace(/^#$/, '');
+    try { history.replaceState(null, '', location.pathname + location.search + rest); } catch (e) { /* 그대로 둔다 */ }
+    try {
+      const t = document.createElement('div');
+      t.textContent = '🔑 이 기기에 열쇠를 넣었어요';
+      t.style.cssText = 'position:fixed;left:50%;top:16px;transform:translateX(-50%);background:#1f7a4d;color:#fff;'
+        + 'padding:10px 16px;border-radius:8px;font-size:14px;z-index:99999;box-shadow:0 2px 8px rgba(0,0,0,.25)';
+      const put = () => { document.body.appendChild(t); setTimeout(() => t.remove(), 3500); };
+      if (document.body) put(); else document.addEventListener('DOMContentLoaded', put);
+    } catch (e) { /* 알림 없이 진행 */ }
+  })();
+  function askK2() {
+    let v = '';
+    try { v = (window.prompt('이 기기에서 저장하려면 두 번째 열쇠를 한 번 넣어 주세요.\n(사장님이 보내 준 열쇠 — 한 번 넣으면 이 기기에 남아요)') || '').trim(); } catch (e) { v = ''; }
+    if (v.length < 16) return false;
+    k2 = v; saveK2(v);
+    return true;
+  }
 
   const clone = o => JSON.parse(JSON.stringify(o));
   const newId = () => 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -40,8 +71,19 @@
 
   async function fetchAll() {
     if (MOCK) return readCache() || {};
-    const r = await fetch(API + '?key=' + encodeURIComponent(KEY) + '&action=all', { cache: 'no-store' });
-    const j = await r.json();
+    let j = null;
+    if (k2) {
+      // 열쇠가 있으면 POST 로 전부 읽는다(비밀을 주소에 싣지 않게). 옛 앱스 스크립트는 'read' 를 몰라 공개 읽기로 넘어간다.
+      try {
+        const r = await fetch(API, { method: 'POST', body: JSON.stringify({ key: KEY, k2: k2, action: 'read' }) });
+        j = await r.json();
+        if (!j.ok) j = null;
+      } catch (e) { j = null; }
+    }
+    if (!j) {
+      const r = await fetch(API + '?key=' + encodeURIComponent(KEY) + '&action=all', { cache: 'no-store' });
+      j = await r.json();
+    }
     if (!j.ok) throw fail('server', j.error);
     const out = {};
     Object.keys(j.data || {}).forEach(c => {
@@ -68,9 +110,14 @@
     if (MOCK) return { ok: true };
     let r, j;
     try {
-      r = await fetch(API, { method: 'POST', body: JSON.stringify(Object.assign({ key: KEY }, body)) });
+      r = await fetch(API, { method: 'POST', body: JSON.stringify(Object.assign({ key: KEY }, k2 ? { k2: k2 } : {}, body)) });
     } catch (e) { throw fail('unsure', String(e)); }
     try { j = await r.json(); } catch (e) { throw fail('unsure', 'HTTP ' + r.status); }
+    if (!j.ok && j.error === 'k2') {
+      // 두 번째 열쇠가 없거나 틀렸다 — 한 번 물어보고 그 열쇠로 다시 보낸다
+      if (askK2()) return send(body);
+      throw fail('k2', '이 기기엔 두 번째 열쇠가 없어 저장하지 못했어요');
+    }
     if (!j.ok) throw fail(j.error === 'key' ? 'invalid_argument' : 'server', j.error);
     return j;
   }
@@ -186,5 +233,5 @@
     return loading;
   }
 
-  window.SheetDB = { use, API, MOCK };
+  window.SheetDB = { use, API, MOCK, hasKey: () => !!k2, forgetKey: () => { k2 = ''; saveK2(''); } };
 })();

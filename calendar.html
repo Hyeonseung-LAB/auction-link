@@ -593,6 +593,7 @@ a.tlink:hover{color:#3182f6;text-decoration:underline}
   }
   function errMsg(e){
     const c=e&&e.code;
+    if(c==='k2') return '이 기기엔 두 번째 열쇠가 없어 저장하지 못했어요. 사장님이 보낸 열쇠 링크를 한 번 열어 주세요.';
     if(c==='quota_exceeded') return '저장 공간이 가득 찼어요. 끝난 물건을 지운 뒤 다시 저장해주세요.';
     if(c==='invalid_argument') return '이 계정 권한으로는 저장할 수 없어요.';
     if(c==='revoked'||c==='not_granted'||c==='capability_disabled') return '저장 권한이 없어졌어요. 페이지를 다시 열어주세요.';
