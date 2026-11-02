@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%94%8E%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<!-- 다크 모드 색은 이 페이지가 직접 정한다(아래 @media) — 브라우저 강제 어둡게(삼성 인터넷·크롬)가 버튼을 남색·노란 글씨로
+     바꾸던 것 막기. 다크여도 버튼은 각 사이트 상징색 그대로(10/9 사장님) -->
+<meta name="color-scheme" content="light dark">
+<title>경매 물건 보기</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif; color: #1f2937;
+         display: flex; min-height: 100vh; margin: 0; align-items: center; justify-content: center;
+         background: #f5f6f8; }
+  .card { background: #fff; border-radius: 16px; padding: 26px 20px 22px; max-width: 420px; width: 88%;
+          box-shadow: 0 4px 20px rgba(0,0,0,.08); text-align: center; }
+  h1 { font-size: 17px; margin: 0 0 6px; line-height: 1.45; word-break: keep-all; }
+  .case { color: #8a94a0; font-size: 14px; margin-bottom: 14px; }
+  .sec { display: none; text-align: left; font-size: 13px; font-weight: 700; color: #8a94a0;
+         margin: 16px 2px 2px; }
+  /* ★삼성 인터넷 다크 모드(사이트가 못 끔)는 링크 글씨를 노랗게, 배경색을 남색으로 누른다(10/9 폰 시험).
+       글씨는 링크 밖(상자)에 두고 누르는 곳은 글씨 없는 투명 링크로 덮는다 — 링크가 아닌 글씨는 흰색 그대로.
+       색은 배경색 대신 안쪽 그림자로 칠한다 — 시험한 8가지 중 그림자 색이 원래 색에 가장 가깝게 남았다. */
+  .btn { display: none; position: relative; padding: 14px; border-radius: 12px; margin: 8px 0;
+         font-size: 16px; font-weight: 700; color: #fff; -webkit-text-fill-color: #fff; }
+  .btn small { font-weight: 400; font-size: 13px; opacity: .85; }
+  .btn a.hit { position: absolute; inset: 0; border-radius: inherit; }
+  .paid { background: #2563eb; box-shadow: inset 0 0 0 200px #2563eb; }      /* 옥션원 */
+  .court { background: #0f766e; box-shadow: inset 0 0 0 200px #0f766e; }     /* 법원경매정보 */
+  .hogang { background: #7048e8; box-shadow: inset 0 0 0 200px #7048e8; }    /* 호갱노노 */
+  .naver { background: #03a94d; box-shadow: inset 0 0 0 200px #03a94d; }     /* 네이버부동산 */
+  .hint { display: none; font-size: 12.5px; line-height: 1.5; color: #6b7682; background: #f1f3f5;
+          border-radius: 10px; padding: 8px 10px; margin: -2px 0 6px; text-align: left; word-break: keep-all; }
+  .hint b { color: inherit; }
+  .hint div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hint div.sub { white-space: normal; margin-top: 3px; font-size: 12px; opacity: .85; }
+  .note { font-size: 12px; color: #99a2ad; margin-top: 16px; }
+  @media (prefers-color-scheme: dark) {        /* 배경·카드·글씨만 어둡게 — 버튼 색은 위 상징색 그대로 */
+    body { background: #17212b; color: #e8edf2; }
+    .card { background: #232e3c; box-shadow: 0 4px 20px rgba(0,0,0,.35); }
+    .case, .sec, .note { color: #8f9aa6; }
+    .hint { background: #1b2530; color: #aab4bf; }
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1 id="title">경매 물건</h1>
+  <div class="case" id="case"></div>
+
+  <div class="sec" id="secAuction">📋 경매 정보</div>
+  <div class="btn paid" id="btnPaid">🔑 옥션원에서 보기 <small>(유료회원)</small><a class="hit" aria-label="옥션원에서 보기"></a></div>
+  <div class="btn court" id="btnCourt">⚖️ 법원경매정보에서 보기 <small>(공식·무료)</small><a class="hit" aria-label="법원경매정보에서 보기"></a></div>
+  <div class="hint" id="courtHint"></div>
+
+  <div class="sec" id="secPrice">💰 시세</div>
+  <div class="btn hogang" id="btnHogang">🏢 호갱노노 <small>(실거래가·단지)</small><a class="hit" aria-label="호갱노노"></a></div>
+  <div class="btn naver" id="btnNaver">🟢 네이버부동산 <small>(지금 나온 매물)</small><a class="hit" aria-label="네이버부동산"></a></div>
+
+  <div class="note">서울 아파트 경매 알리미 · @SeoulAPTauction</div>
+</div>
+<script>
+  var q = new URLSearchParams(location.search);
+  var pid = q.get("pid"), cs = q.get("case"), t = q.get("t");
+  if (t) document.getElementById("title").textContent = t;
+  if (cs) document.getElementById("case").textContent = cs;
+  function show(id, href) {        // 상자를 보이고 덮개 링크에 주소를 단다(덮개 링크를 돌려준다)
+    var box = document.getElementById(id), a = box.querySelector("a.hit");
+    a.href = href;
+    box.style.display = "block";
+    return a;
+  }
+  var auction = false, price = false;
+
+  // ① 경매 정보 — 옥션원(물건 화면 직행)
+  if (pid && /^\d{1,12}$/.test(pid)) {
+    show("btnPaid", "https://www.auction1.co.kr/auction/ca_view.php?product_id=" + pid);
+    auction = true;
+  }
+  // ① 경매 정보 — 법원경매정보: 사건 화면 직링크가 없다(검색이 화면 안 POST). 번호를 복사해 두고 '경매사건검색'을 연다.
+  var cm = (cs || "").match(/^(\d{4})타경(\d+)$/);
+  if (cm) {
+    var court = q.get("ct") || "";
+    var year = cm[1], no = cm[2];
+    var hint = document.getElementById("courtHint");
+    // 할 일 순서대로 한 줄씩 — 한 문장으로 이으면 '→ 검색'이 다음 줄로 떨어져 어색했다
+    hint.innerHTML = "<div>열린 화면에서</div>" +
+                     "<div>① 법원: <b>" + (court ? esc(court) : "목록에서 고르기") + "</b></div>" +
+                     "<div>② 사건번호: <b>" + year + " 타경 " + no + "</b> → 검색</div>" +
+                     "<div class=\"sub\">번호는 복사돼 있어요 — 붙여넣기만 하세요.</div>";
+    hint.style.display = "block";
+    var bc = show("btnCourt", "https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ159M00.xml");
+    bc.addEventListener("click", function () { copy(no); });
+    auction = true;
+  }
+  // ② 시세 — 호갱노노: hg=단지번호(단지 페이지로 바로), 못 찾은 아파트는 hq=검색어. 빌라엔 둘 다 없다.
+  var hg = q.get("hg"), hq = q.get("hq"), nq = q.get("nq");
+  // 옛 링크(10/9 전 텔레그램·그날 아침 게시본)엔 hg·hq·nq 가 없다 → 제목(t)에서 '동 단지명'을 뽑아 검색 화면으로라도 잇는다
+  if (!hg && !hq && !nq && t) {
+    var fb = guessQuery(t);
+    if (fb) { hq = fb; nq = fb; }
+  }
+  if (hg && /^[A-Za-z0-9]{1,12}$/.test(hg)) {
+    show("btnHogang", "https://hogangnono.com/apt/" + hg); price = true;
+  } else if (hq) {
+    show("btnHogang", "https://hogangnono.com/search?q=" + encodeURIComponent(hq)); price = true;
+  }
+  // ② 시세 — 네이버부동산 검색(아파트 '동 단지명', 빌라 '구 동 빌라')
+  if (nq) {
+    show("btnNaver", "https://m.land.naver.com/search/result/" + encodeURIComponent(nq)); price = true;
+  }
+  if (auction) document.getElementById("secAuction").style.display = "block";
+  if (price) document.getElementById("secPrice").style.display = "block";
+  if (t) document.title = t + " | 보기 선택";
+
+  function guessQuery(title) {
+    // '영등포구 양평동1가 271, 영등포중흥에스클래스 101동 7층 705호' → '양평동1가 영등포중흥에스클래스'
+    // (hogang.query 와 같은 규칙 — 쉼표 앞 끝이 번지, 그 앞이 동, 쉼표 뒤 첫 낱말이 단지명. '201동'·'3층'뿐이면 포기)
+    var i = title.indexOf(",");
+    if (i < 0) return "";
+    var head = title.slice(0, i).replace(/\s*외\s*\d+\s*필지/, "").trim().split(/\s+/),   // '804 외 1필지' → '804'
+        tail = title.slice(i + 1).trim().split(/\s+/);
+    if (head.length < 2 || !/\d/.test(head[head.length - 1])) return "";
+    var name = tail[0] || "";
+    if (!name || /^[\d-]+(동|층|호)?$|^제?\d/.test(name)) return "";
+    return head[head.length - 2] + " " + name;
+  }
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) { return {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]; });
+  }
+  function copy(text) {
+    // 동기 복사(execCommand)를 먼저 — 링크로 넘어가는 순간 비동기 복사가 끊기는 브라우저가 있다
+    try {
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
+    } catch (e) {}
+    try { if (navigator.clipboard) navigator.clipboard.writeText(text); } catch (e) {}
+  }
+</script>
+</body>
+</html>
