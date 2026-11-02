@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
 <meta name="color-scheme" content="light only">
 <title>📈 시장 온도계</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
@@ -485,6 +486,7 @@ function km(a,b){ const R=6371, t=x=>x*Math.PI/180, dl=t(b[1]-a[1]), dn=t(b[0]-a
 const walkMin = m => m==null?null:Math.max(1,Math.round(m*1.3/67));   // 직선거리 → 도보 분(어림)
 async function loadHome(){
   if(!HOMES) HOMES=await getJSON(BASE+'homes.json');
+  await loadSubway();
   if(COND===null){
     try{ CDB=await SheetDB.use(); CKEY=!!CDB&&canSave(); const s=CDB?await CDB.doc('notes/home-conditions').get():null; COND=(s&&s.exists)?(s.data()||{}):{}; }
     catch(e){ COND={}; }
@@ -495,6 +497,41 @@ function saveCond(){ if(!CKEY) return;   // 열쇠 없는 기기 — 화면에�
   clearTimeout(csave); csave=setTimeout(async()=>{ const e2=document.getElementById('csaved');
     try{ if(!CDB) throw new Error('시트 연결 안 됨'); await CDB.doc('notes/home-conditions').set(COND); if(e2) e2.textContent='✓ 조건 저장됨(우리 구글 시트)'; }
     catch(e){ if(e2) e2.textContent='저장 못 했어요 — '+e.message; } }, 700); }
+// 🕒 출퇴근(지하철만, 어림 — 11/2) — 공개 파일 subway.json 엔 역·역 사이 분만 있고, 근무지 좌표는 시트에서 읽어 폰에서만 계산한다.
+//  걸어서 역까지(직선×1.3, 분당 67m) + 처음 기다림 3분 + 역 사이(오픈스트리트맵 노선 순서, 거리로 어림 — market_subway.py) + 갈아타기 5분(GTX 8분) + 내려서 걸어서.
+//  근무지·단지에서 1.2km 안 역만 쓴다(더 멀면 버스·차라 안 셈). 근무지가 1.5km 안이면 걸어서만.
+let SUBW=null, CTK=null, CT=null;
+const WAIT0=3, XFER=5, NEAR_M=1200;
+const walkM = m => m*1.3/67;
+async function loadSubway(){ if(SUBW===null){ try{ SUBW=await getJSON(BASE+'subway.json'); }catch(e){ SUBW=false; } } return SUBW||null; }
+function nearSt(lng, lat){ const out=[], S=SUBW.st;
+  for(let i=0;i<S.length;i++){ const x=S[i]; if(Math.abs(x[1]-lat)>0.012||Math.abs(x[2]-lng)>0.016) continue;
+    const m=km([lng,lat],[x[2],x[1]])*1000; if(m<=NEAR_M) out.push([i,m]); }
+  return out; }
+function commuteTable(plan){            // 근무지 쪽에서 거꾸로 한 번 풀어 둔다(역마다 근무지까지 분)
+  if(!SUBW||!plan) return null;
+  const key=JSON.stringify(plan.pts||[]); if(CTK===key) return CT; CTK=key; CT=null;
+  const n=SUBW.st.length, adj=Array.from({length:n},()=>[]);
+  for(const [a,b,m,ln] of SUBW.e){ adj[a].push([b,m,ln]); adj[b].push([a,m,ln]); }
+  const pq=[];
+  const push=(t,s,ln)=>{ pq.push([t,s,ln]); let i=pq.length-1; while(i>0){ const p=(i-1)>>1; if(pq[p][0]<=pq[i][0]) break; [pq[p],pq[i]]=[pq[i],pq[p]]; i=p; } };
+  const pop=()=>{ const top=pq[0], last=pq.pop(); if(pq.length){ pq[0]=last; let i=0;
+    for(;;){ const l=2*i+1, r=l+1; let m=i; if(l<pq.length&&pq[l][0]<pq[m][0]) m=l; if(r<pq.length&&pq[r][0]<pq[m][0]) m=r; if(m===i) break; [pq[m],pq[i]]=[pq[i],pq[m]]; i=m; } }
+    return top; };
+  for(const p of (plan.pts||[])) for(const [i,m] of nearSt(p.lng,p.lat)) push(walkM(m), i, '');
+  if(!pq.length) return null;          // 근무지 가까이 역이 없다(셔틀·차 출퇴근) — 지하철 시간은 안 셈
+  const T=new Float64Array(n).fill(Infinity), done=new Set();
+  while(pq.length){ const [t,s,ln]=pop(), k=s+'|'+ln; if(done.has(k)) continue; done.add(k); if(t<T[s]) T[s]=t;
+    for(const [b,m,l2] of adj[s]) if(!done.has(b+'|'+l2)) push(t+m+(ln&&l2!==ln?((ln+l2).includes('GTX')?8:XFER):0), b, l2); }
+  CT=T; return T;
+}
+function commuteOf(r, plan){            // homes.json 줄 → 분(어림) 또는 null(역이 멀어 안 셈)
+  const T=commuteTable(plan); if(!T) return null;
+  let best=null;
+  for(const p of (plan.pts||[])){ const d=km([r[4],r[5]],[p.lng,p.lat])*1000; if(d<=1500){ const w=walkM(d); if(best==null||w<best) best=w; } }
+  for(const [i,m] of nearSt(r[4],r[5])){ if(T[i]===Infinity) continue; const t=walkM(m)+WAIT0+T[i]; if(best==null||t<best) best=t; }
+  return best==null?null:Math.round(best);
+}
 function homeRows(){
   const c=COND, plan=(c.plans||[])[c.plan||0]; if(!plan) return [];
   const pts=(plan.pts||[]).map(p=>[p.lng,p.lat,p.n]), out=[], yr=new Date().getFullYear();
@@ -506,11 +543,12 @@ function homeRows(){
     // 버스: r[12] = 정류장 직선 m(-1 = 물어봤는데 가까이 없음, null = 아직 못 물음·인천) — 못 물은 곳은 거르지 않는다
     const bw=r[12]==null?null:(r[12]<0?99:walkMin(r[12])); if(c.bwalk&&bw!=null&&bw>c.bwalk) continue;
     if(c.age&&r[6]&&yr-r[6]>c.age) continue;
+    const ct=commuteOf(r, plan); if(c.commute&&(ct==null||ct>c.commute)) continue;
     for(const bd of bands){ const b=r[HB[bd]]; if(!b||!b[0]) continue;
       if(c.budget&&b[0]>c.budget) continue; if((c.minN||0)>b[1]) continue;
-      out.push({r, bd, b, dist:best[0], to:best[1], w, bw}); }
+      out.push({r, bd, b, dist:best[0], to:best[1], w, bw, ct}); }
   }
-  const k=c.sort||'dist', f={dist:x=>x.dist, cheap:x=>x.b[0], deal:x=>-x.b[1], new:x=>-(x.r[6]||0), drop:x=>x.b[0]/x.b[2]}[k]||(x=>x.dist);
+  const k=c.sort||'dist', f={dist:x=>x.dist, cheap:x=>x.b[0], deal:x=>-x.b[1], new:x=>-(x.r[6]||0), drop:x=>x.b[0]/x.b[2], time:x=>x.ct??999}[k]||(x=>x.dist);
   return out.sort((a,b)=>f(a)-f(b));
 }
 async function renderHome(app){
@@ -526,6 +564,7 @@ async function renderHome(app){
   const rows=homeRows(), show=st.all?rows:rows.slice(0,40);
   const opt=(v,list)=>list.map(([x,t])=>`<option value="${x}"${String(v)===String(x)?' selected':''}>${t}</option>`).join('');
   const P0=c.plans[c.plan||0];
+  const CTOK=!!commuteTable(P0);
   app.innerHTML=nav+`<div class="head"><h1>🏠 내 집 후보</h1><div class="sub">${nw(ymK(HOMES.last)+' 계약분까지')} · ${nw('아파트 실거래 기준')}</div></div>
     <div class="chips">${c.plans.map((p,i)=>`<button class="chip ${(c.plan||0)===i?'on':''}" data-plan="${i}">${esc(p.name)}</button>`).join('')}</div>
     <div class="card"><div class="cond">
@@ -535,20 +574,21 @@ async function renderHome(app){
       <label>역까지 걸어서<select data-c="walk">${opt(c.walk||'',[[5,'5분 안'],[10,'10분 안'],[15,'15분 안'],[20,'20분 안'],['','상관없음']])}</select></label>
       <label>버스까지 걸어서<select data-c="bwalk">${opt(c.bwalk||'',[[3,'3분 안'],[5,'5분 안'],[10,'10분 안'],['','상관없음']])}</select></label>
       <label>연식<select data-c="age">${opt(c.age||'',[[5,'5년 안'],[10,'10년 안'],[15,'15년 안'],[20,'20년 안'],[30,'30년 안'],['','상관없음']])}</select></label>
+      ${CTOK?`<label>출퇴근(지하철)<select data-c="commute">${opt(c.commute||'',[[30,'30분 안'],[40,'40분 안'],[50,'50분 안'],[60,'60분 안'],[75,'75분 안'],['','상관없음']])}</select></label>`:''}
       <label>1년 거래<select data-c="minN">${opt(c.minN||0,[[0,'상관없음'],[3,'3건 이상'],[6,'6건 이상'],[12,'12건 이상']])}</select></label>
     </div><div class="saved" id="csaved">${CKEY?'':'🔑 이 기기엔 두 번째 열쇠가 없어요<br>바꾼 조건은 이 화면에서만 쓰고 저장 안 돼요'}</div></div>
     <div class="lab">후보 ${rows.length.toLocaleString()}곳 · ${esc(P0.name)}</div>
     <div class="chips"><button class="chip ${st.hv?'':'on'}" data-hv="">📋 목록</button><button class="chip ${st.hv?'on':''}" data-hv="map">🗺 지도</button></div>
     ${st.hv?`<div class="card hmc"><div class="hmap" id="hmap"></div><div class="legend" id="hleg"></div></div>`:`
-    <div class="chips">${[['dist','가까운 순'],['cheap','싼 순'],['deal','거래 많은 순'],['new','새 아파트 순'],['drop','최고가보다 많이 내린 순']].map(([k,t])=>`<button class="chip ${(c.sort||'dist')===k?'on':''}" data-sort="${k}">${t}</button>`).join('')}</div>
+    <div class="chips">${[['dist','가까운 순'],['cheap','싼 순'],['deal','거래 많은 순'],['new','새 아파트 순'],['drop','최고가보다 많이 내린 순'],...(CTOK?[['time','출퇴근 빠른 순']]:[])].map(([k,t])=>`<button class="chip ${(c.sort||'dist')===k?'on':''}" data-sort="${k}">${t}</button>`).join('')}</div>
     <div class="card">${show.map(x=>{ const r=x.r, b=x.b, dr=b[0]/b[2]-1;
       return `<div class="row" data-h="${r[0]}|${esc(r[1])}|${esc(r[2])}|${x.bd}"><div class="a"><div class="n">${esc(r[3])}</div>
         <div class="m">${nw(esc(r[1]))}${r[6]?' · '+nw(r[6]+'년'):''}${r[7]?' · '+nw('🚇 '+esc(r[7].replace(/ .*$/,''))+' 약 '+x.w+'분'):''}</div>
         <div class="m">${r[11]?nw('🚌 '+esc(r[11])+' 약 '+x.bw+'분'):(r[12]===-1?nw('🚌 가까운 정류장 없음'):(r[0].startsWith('28')?'':nw('🚌 확인 중')))}</div>
-        <div class="m">${nw('🏢 '+esc(x.to)+' '+x.dist.toFixed(1)+'km')}${b[3]?' · '+nw('전세가율 '+b[3]+'%'):''}</div></div>
+        <div class="m">${nw('🏢 '+esc(x.to)+' '+x.dist.toFixed(1)+'km')}${x.ct!=null?' · '+nw('🕒 약 '+x.ct+'분'):''}${b[3]?' · '+nw('전세가율 '+b[3]+'%'):''}</div></div>
         <div class="b"><div class="p">${nw(x.bd+'㎡대 '+man(b[0]))}</div><div class="m">${nw('1년 '+b[1]+'건')}</div><div class="m">${nw('최고가 대비 ')}${pctH(dr,0)}</div></div></div>`; }).join('')||'<div class="empty">조건에 맞는 단지가 없어요.<br>조건을 넓혀 보세요.</div>'}
       ${rows.length>show.length?`<button class="more" id="more">${(rows.length-show.length).toLocaleString()}곳 더 보기</button>`:''}</div>`}
-    <div class="foot">· 값은 최근 12개월 중개거래 중위가예요(직거래 빼고).<br>· 역까지 걸어서 = 가까운 지하철역 직선거리로 어림한 값(추정)이에요.<br>· 버스도 가까운 정류장 직선거리로 어림해요.<br>· 경기 단지 버스는 하루 1,000곳씩 채우는 중이라 '확인 중'이 보일 수 있어요.<br>· 인천은 버스 자료가 없어요.<br>· 조건은 우리 구글 시트에만 저장돼요.<br>· 조건은 두 번째 열쇠가 있는 기기에서만 보이고 저장돼요.<br>· 지도 바탕은 오픈스트리트맵이에요(근무지는 이 화면에서만 그려요).</div>`;
+    <div class="foot">· 값은 최근 12개월 중개거래 중위가예요(직거래 빼고).<br>· 역까지 걸어서 = 가까운 지하철역 직선거리로 어림한 값(추정)이에요.<br>· 버스도 가까운 정류장 직선거리로 어림해요.<br>· 경기 단지 버스는 하루 1,000곳씩 채우는 중이라 '확인 중'이 보일 수 있어요.<br>· 인천은 버스 자료가 없어요.<br>· 조건은 우리 구글 시트에만 저장돼요.<br>· 조건은 두 번째 열쇠가 있는 기기에서만 보이고 저장돼요.<br>· 지도 바탕은 오픈스트리트맵이에요(근무지는 이 화면에서만 그려요).${!SUBW?'':(CTOK?'':'<br>· 이 근무지는 1.2km 안에 역이 없어 지하철 출퇴근 시간을 안 셌어요.')+'<br>· 🕒 출퇴근 = 지하철만 어림한 값(추정)이에요.<br>· 걸어서 역까지 + 기다림 3분 + 역 사이 + 갈아타기 5분(GTX 8분) + 내려서 걸어서로 셌어요.<br>· 역 사이 시간은 거리로 어림했고 급행·버스는 안 셌어요.<br>· 역 순서 자료: © OpenStreetMap 기여자'}</div>`;
   app.querySelector('#bk').onclick=()=>go({v:null});
   app.querySelectorAll('[data-plan]').forEach(b=>b.onclick=()=>{ c.plan=+b.dataset.plan; saveCond(); render(); });
   app.querySelectorAll('[data-sort]').forEach(b=>b.onclick=()=>{ c.sort=b.dataset.sort; saveCond(); render(); });
@@ -588,7 +628,7 @@ async function drawHomeMap(el, leg, rows, plan){
     const lines=c.xs.sort((a,b)=>a.bd-b.bd).map(x=>`${x.bd}㎡대 <b>${man(x.b[0])}</b> · 1년 ${x.b[1]}건 · 최고가 대비 ${pct(x.b[0]/x.b[2]-1,0)}`).join('<br>');
     const html=`<div class="hpop"><b>${esc(r[3])}</b><br>${esc(r[1])}${r[6]?' · '+r[6]+'년':''}`
       +`${r[7]?'<br>🚇 '+esc(r[7].replace(/ .*$/,''))+' 약 '+c.xs[0].w+'분':''}${r[11]?'<br>🚌 '+esc(r[11])+' 약 '+c.xs[0].bw+'분':''}`
-      +`<br>🏢 ${esc(c.xs[0].to)} ${c.xs[0].dist.toFixed(1)}km<br>${lines}`
+      +`<br>🏢 ${esc(c.xs[0].to)} ${c.xs[0].dist.toFixed(1)}km${c.xs[0].ct!=null?` · 🕒 약 ${c.xs[0].ct}분`:''}<br>${lines}`
       +`<br><a href="#" class="go" data-go="${r[0]}|${esc(r[1])}|${esc(r[2])}|${c.xs[0].bd}">단지 보기 →</a></div>`;
     L.circleMarker([r[5],r[4]],{radius:cs.length>300?5:6.5, color:'#fff', weight:1.5, fillColor:COL[tier(c.p)], fillOpacity:.92}).bindPopup(html).addTo(map); }
   const pins=[];
