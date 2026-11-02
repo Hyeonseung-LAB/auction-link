@@ -82,6 +82,17 @@ button{font:inherit;color:inherit}
 .empty{padding:18px 4px;color:var(--t3);font-size:13.5px;line-height:1.6}
 .more{display:block;width:100%;margin-top:8px;border:0;background:#f2f4f6;border-radius:10px;padding:10px;font-size:13.5px;font-weight:700;color:var(--t2);cursor:pointer}
 .foot{font-size:11.5px;color:var(--t3);line-height:1.7;margin-top:22px}
+/* 📊 흐름 비교(11/2) */
+.cchips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 2px}
+.cml{margin-top:6px}
+.cmr{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.cmr:first-child{border-top:0}
+.cmr>i{flex:0 0 auto;width:10px;height:10px;border-radius:50%;margin-top:5px}
+.cmb{flex:1 1 auto;min-width:0}
+.cmb .nm{font-size:14px;font-weight:800;color:var(--t1)}
+.cmb .vs{font-size:12.5px;color:var(--t2);margin-top:2px;word-break:keep-all}
+.cmr .x{flex:0 0 auto;border:0;background:var(--soft);border-radius:8px;width:28px;height:28px;color:var(--t3);font-weight:800;cursor:pointer}
+.cmpadd{display:block;width:100%;margin-top:8px;font:inherit;font-size:13.5px;font-weight:700;color:var(--t2);border:1.5px dashed var(--line);border-radius:10px;padding:9px 10px;background:#fff}
 @media(min-width:620px){.tiles{grid-template-columns:repeat(6,1fr)}}
 @media(max-width:419px){.tiles.two{grid-template-columns:repeat(2,1fr)}}
 .hentry{display:inline-flex;align-items:center;gap:6px;margin-top:10px;border:1.5px solid var(--ink);background:#fff;border-radius:999px;padding:7px 14px;font-size:13.5px;font-weight:800;color:var(--t1);cursor:pointer}
@@ -108,7 +119,7 @@ const BASE = 'market/';
 let SUM = null;                       // summary.json
 let WEEK;                              // week.json(📰 이번 주 신고분) — 없으면 null
 const DET = {};                       // 구코드 → 상세 json
-const st = {k:'apt', f:'전체', o:'c3', r:null, d:null, x:null, a:null, all:false};
+const st = {k:'apt', f:'전체', o:'c3', r:null, d:null, x:null, a:null, all:false, cmp:[], cw:''};
 const KIND = {apt:'아파트', rh:'빌라'};
 const SORTS = [['c3','3개월'],['c12','12개월'],['peak','전고점 대비'],['vol','거래 증감'],['jr','전세가율'],['m2','㎡당 가격']];
 const INFO = {
@@ -137,6 +148,11 @@ const INFO = {
          '⚖️ 오른·내린 = 같은 단지·평형 바로 앞 거래와 비교해요.',
          '직거래는 신고가·오른·내린에서 빼요.',
          '아래 흐름(다 찬 달 기준)과는 세는 법이 달라요.'],
+  cmp: ['같은 단지·같은 평형끼리만 비교한 가격 흐름이에요(구·시 화면과 같은 방식).',
+        '서울·경기·인천은 그 안 구·시 흐름을 거래 수만큼 무게를 줘서 묶었어요.',
+        '고른 기간의 첫 달을 100으로 맞춰 겹쳐 그려요.',
+        '전고점 대비 = 2021년 이후 가장 높았던 달과 지금의 차이예요.',
+        '아래 ＋ 칸에서 구·시를 3곳까지 더해 볼 수 있어요.'],
   data: ['국토교통부 실거래가 공개 자료예요.',
          '계약 뒤 30일 안에 신고하니 그 달 말일 + 30일이 지난 달까지만 써요.',
          '해제(취소)된 거래는 빼요.']
@@ -164,10 +180,12 @@ const dK = s => s ? s.slice(0,10).replace(/-/g,'.') : '–';
 const defO = k => k==='rh' ? 'c12' : 'c3';   // 빌라는 6개월 묶음이라 기본 정렬도 12개월
 function readHash(){ const p=new URLSearchParams(location.hash.slice(1));
   st.k = p.get('k')==='rh' ? 'rh' : 'apt'; st.f = p.get('f')||'전체'; st.o = p.get('o')||defO(st.k);
-  st.r = p.get('r'); st.d = p.get('d'); st.x = p.get('x'); st.a = p.get('a'); st.v = p.get('v'); }
+  st.r = p.get('r'); st.d = p.get('d'); st.x = p.get('x'); st.a = p.get('a'); st.v = p.get('v');
+  st.cmp=(p.get('cmp')||'').split(',').filter(c=>/^\d{5}$/.test(c)).slice(0,3); st.cw=['3y','1y'].includes(p.get('cw'))?p.get('cw'):''; }
 function go(ch){ if('r' in ch || 'd' in ch){ st.all=false; st.wall=false; } Object.assign(st, ch); const p=new URLSearchParams();
   if(st.k!=='apt') p.set('k',st.k); if(st.f!=='전체') p.set('f',st.f); if(st.o!==defO(st.k)) p.set('o',st.o);
   for(const k of ['v','r','d','x','a']) if(st[k]) p.set(k,st[k]);
+  if(st.cmp&&st.cmp.length) p.set('cmp',st.cmp.join(',')); if(st.cw) p.set('cw',st.cw);
   const h='#'+p.toString(); if(location.hash!==h) location.hash=h; else render(); }
 window.addEventListener('hashchange', ()=>{
   // 🔑 열린 페이지에서 열쇠 링크(#k2=…)를 열면 새로 읽어야 sheetdb.js 가 열쇠를 받아 넣고 주소창에서 지운다(11/2)
@@ -229,10 +247,12 @@ function attachTip(plot, svg, fr, n, xOf, html, mark){
 function lineChart(el, xs, ys, o={}){
   const fr=frame(el, o.h||190), {w,h,l,r,t,b}=fr;
   const vals=ys.filter(v=>v!=null); if(vals.length<2){ el.innerHTML='<div class="empty">표본이 적어 흐름을 그리지 않아요.</div>'; return; }
-  let lo=Math.min(...vals), hi=Math.max(...vals); const pad=(hi-lo)*0.08||1; lo-=pad; hi+=pad;
+  const rv=o.ref?o.ref.ys.filter(v=>v!=null):[];       // 위 단계 흐름(구 화면 = 시도 전체, 동 화면 = 구 전체) — 회색 점선(11/2)
+  let lo=Math.min(...vals,...rv), hi=Math.max(...vals,...rv); const pad=(hi-lo)*0.08||1; lo-=pad; hi+=pad;
   const ticks=niceTicks(lo,hi,4); lo=Math.min(lo,ticks[0]); hi=Math.max(hi,ticks[ticks.length-1]);
   const xOf=i=>l+(w-l-r)*i/(xs.length-1), yOf=v=>t+(h-t-b)*(1-(v-lo)/(hi-lo));
-  let d='', pen=false; ys.forEach((v,i)=>{ if(v==null){pen=false;return;} d+=(pen?'L':'M')+xOf(i).toFixed(1)+' '+yOf(v).toFixed(1); pen=true; });
+  const pathOf=a=>{ let d='', pen=false; a.forEach((v,i)=>{ if(v==null){pen=false;return;} d+=(pen?'L':'M')+xOf(i).toFixed(1)+' '+yOf(v).toFixed(1); pen=true; }); return d; };
+  const d=pathOf(ys);
   const grid=ticks.map(v=>`<line x1="${l}" x2="${w-r}" y1="${yOf(v)}" y2="${yOf(v)}" stroke="var(--grid)"/><text x="${l-6}" y="${yOf(v)+4}" text-anchor="end">${(o.fmtAxis||(x=>x))(v)}</text>`).join('');
   const yt=yearTicks(xs,xOf).replaceAll('__B__',h-6).replaceAll('__T__',t).replaceAll('__B0__',h-b);
   let marks='';
@@ -241,12 +261,38 @@ function lineChart(el, xs, ys, o={}){
   const li=ys.length-1;
   el.innerHTML=`<div class="plot"><svg viewBox="0 0 ${w} ${h}" height="${h}" font-size="11" fill="var(--t3)">${grid}${yt}
     <line class="cross" y1="${t}" y2="${h-b}" stroke="var(--t3)" stroke-width="1" style="display:none"/>
+    ${o.ref?`<path d="${pathOf(o.ref.ys)}" fill="none" stroke="#a3acb6" stroke-width="1.6" stroke-dasharray="4 3" stroke-linejoin="round"/>`:''}
     <path d="${d}" fill="none" stroke="${o.color||'var(--s1)'}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
     ${ys[li]!=null?`<circle cx="${xOf(li)}" cy="${yOf(ys[li])}" r="4" fill="${o.color||'var(--s1)'}" stroke="#fff" stroke-width="2"/>`:''}
     <circle class="dot" r="5" fill="${o.color||'var(--s1)'}" stroke="#fff" stroke-width="2" style="display:none"/>
-    ${marks}<rect x="${l}" y="${t}" width="${w-l-r}" height="${h-t-b}" fill="transparent"/></svg><div class="tip"></div></div>`;
+    ${marks}<rect x="${l}" y="${t}" width="${w-l-r}" height="${h-t-b}" fill="transparent"/></svg><div class="tip"></div></div>
+    ${o.ref?`<div class="legend"><span><i style="background:${o.color||'var(--s1)'}"></i>${esc(o.name||'')}</span><span><i style="background:#a3acb6"></i>${esc(o.ref.name)}</span></div>`:''}`;
   const plot=el.querySelector('.plot'), svg=plot.querySelector('svg'), dot=svg.querySelector('.dot');
   attachTip(plot, svg, fr, xs.length, xOf, i=> ys[i]==null?null:o.tip(i), i=>{ if(i<0||ys[i]==null){dot.style.display='none';return;} dot.setAttribute('cx',xOf(i)); dot.setAttribute('cy',yOf(ys[i])); dot.style.display=''; });
+}
+// 📊 여러 줄(흐름 비교, 11/2) — series: [{name,color,ys}] · 100 기준 점선 · 손가락 대면 그 달 값 전부
+function multiLine(el, xs, series, o={}){
+  const fr=frame(el, o.h||210), {w,h,l,r,t,b}=fr;
+  const vals=series.flatMap(s=>s.ys.filter(v=>v!=null)); if(vals.length<2){ el.innerHTML='<div class="empty">그릴 흐름이 없어요.</div>'; return; }
+  let lo=Math.min(...vals,100), hi=Math.max(...vals,100); const pad=(hi-lo)*0.08||1; lo-=pad; hi+=pad;
+  const ticks=niceTicks(lo,hi,4); lo=Math.min(lo,ticks[0]); hi=Math.max(hi,ticks[ticks.length-1]);
+  const xOf=i=>l+(w-l-r)*i/(xs.length-1), yOf=v=>t+(h-t-b)*(1-(v-lo)/(hi-lo));
+  const grid=ticks.map(v=>`<line x1="${l}" x2="${w-r}" y1="${yOf(v)}" y2="${yOf(v)}" stroke="var(--grid)"/><text x="${l-6}" y="${yOf(v)+4}" text-anchor="end">${Math.round(v)}</text>`).join('');
+  // 1년(13달)은 1월 눈금이 하나뿐이라 석 달마다 'YY.MM'
+  const yt=(xs.length>14?yearTicks(xs,xOf):xs.map((m,i)=>i%3===0?`<text x="${xOf(i)}" y="__B__" text-anchor="${i?'middle':'start'}">${ymS(m)}</text>`:'').join(''))
+    .replaceAll('__B__',h-6).replaceAll('__T__',t).replaceAll('__B0__',h-b);
+  const pathOf=a=>{ let d='', pen=false; a.forEach((v,i)=>{ if(v==null){pen=false;return;} d+=(pen?'L':'M')+xOf(i).toFixed(1)+' '+yOf(v).toFixed(1); pen=true; }); return d; };
+  const li=xs.length-1;
+  const lines=series.map(s=>`<path d="${pathOf(s.ys)}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`).join('');
+  const ends=series.map(s=>s.ys[li]!=null?`<circle cx="${xOf(li)}" cy="${yOf(s.ys[li])}" r="3.5" fill="${s.color}" stroke="#fff" stroke-width="1.5"/>`:'').join('');
+  const dots=series.map((s,si)=>`<circle class="dot" r="4.5" fill="${s.color}" stroke="#fff" stroke-width="2" style="display:none"/>`).join('');
+  el.innerHTML=`<div class="plot"><svg viewBox="0 0 ${w} ${h}" height="${h}" font-size="11" fill="var(--t3)">${grid}${yt}
+    <line x1="${l}" x2="${w-r}" y1="${yOf(100)}" y2="${yOf(100)}" stroke="var(--t3)" stroke-dasharray="3 3"/>
+    <line class="cross" y1="${t}" y2="${h-b}" stroke="var(--t3)" stroke-width="1" style="display:none"/>
+    ${lines}${ends}${dots}<rect x="${l}" y="${t}" width="${w-l-r}" height="${h-t-b}" fill="transparent"/></svg><div class="tip"></div></div>`;
+  const plot=el.querySelector('.plot'), svg=plot.querySelector('svg'), ds=[...svg.querySelectorAll('.dot')];
+  attachTip(plot, svg, fr, xs.length, xOf, i=>series.some(s=>s.ys[i]!=null)?o.tip(i):null,
+    i=>ds.forEach((d,si)=>{ const v=i<0?null:series[si].ys[i]; if(v==null){d.style.display='none';return;} d.setAttribute('cx',xOf(i)); d.setAttribute('cy',yOf(v)); d.style.display=''; }));
 }
 function barChart(el, xs, ys, o={}){
   const fr=frame(el, o.h||150), {w,h,l,r,t,b}=fr;
@@ -318,6 +364,45 @@ function bindControls(root){
   root.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>go({k:b.dataset.k, o:st.o===defO(st.k)?defO(b.dataset.k):st.o, x:null, a:null}));
   root.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>go({f:b.dataset.f}));
   root.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>go({o:b.dataset.o}));
+}
+
+// ── 📊 흐름 비교(11/2) — 서울·경기·인천 + 고른 구·시(3곳까지)를 한 차트에. 고른 기간 첫 달 = 100 ──
+const CW=[['','2021년부터'],['3y','3년'],['1y','1년']];
+const CCOL=['#2a78d6','#eb6834','#16a34a','#8b5cf6','#0f766e','#a16207'];
+function cmpSeries(){
+  const out=[];
+  for(const g of (SUM.sido||[])){ const m=g[st.k]; if(m&&m.ok) out.push({name:g.s+' 전체', m}); }
+  for(const c of st.cmp){ const g=SUM.regions.find(x=>x.c===c); if(!g) continue; const m=g[st.k];
+    const dup=SUM.regions.filter(x=>x.n===g.n).length>1;          // 중구·동구·서구는 시도까지
+    out.push({name:(dup?g.s+' ':'')+g.n, m:m&&m.ok?m:null, code:c}); }
+  return out.map((x,i)=>Object.assign(x,{color:CCOL[i%CCOL.length]}));
+}
+function cmpCard(){
+  if(!SUM.sido||!SUM.sido.length) return '';
+  const used=new Set(st.cmp), full=st.cmp.length>=3;
+  const opts=['서울','경기','인천'].map(s=>`<optgroup label="${s}">${SUM.regions.filter(g=>g.s===s&&!used.has(g.c)&&g[st.k]&&g[st.k].ok).map(g=>`<option value="${g.c}">${esc(g.n)}</option>`).join('')}</optgroup>`).join('');
+  return `<div class="card ch" id="cmp"><h3>📊 흐름 비교 ${info('cmp')}</h3><div class="cap" id="cmpcap"></div>
+    <div class="cchips">${CW.map(([k,t])=>`<button class="chip ${st.cw===k?'on':''}" data-cw="${k}">${t}</button>`).join('')}</div>
+    <div id="c-cmp"></div><div class="cml" id="cml"></div>
+    <select class="cmpadd" id="cmpadd"${full?' disabled':''}><option value="">${full?'구·시는 3곳까지 더할 수 있어요':'＋ 구·시 더해 보기'}</option>${full?'':opts}</select></div>`;
+}
+function drawCmp(app){
+  const box=app.querySelector('#c-cmp'); if(!box) return;
+  const S=cmpSeries(), live=S.filter(x=>x.m), n=SUM.months.length;
+  let i0=Math.max(0, st.cw==='1y'?n-13:st.cw==='3y'?n-37:0);
+  while(i0<n-2 && live.some(x=>x.m.idx[i0]==null)) i0++;           // 모든 줄이 값을 가진 첫 달(빌라는 6개월 묶음이라 늦게 시작)
+  const xs=SUM.months.slice(i0);
+  live.forEach(x=>{ const b0=x.m.idx[i0]; x.ys=x.m.idx.slice(i0).map(v=>v==null||!b0?null:v/b0*100); const e=x.ys[x.ys.length-1]; x.chg=e!=null?e/100-1:null; });
+  app.querySelector('#cmpcap').innerHTML=`같은 집 기준 · ${nw(ymK(xs[0])+' = 100')} · ${KIND[st.k]}`;
+  multiLine(box, xs, live, {tip:i=>`<b>${ymK(xs[i])}</b>`+live.filter(x=>x.ys[i]!=null).sort((a,c)=>c.ys[i]-a.ys[i])
+    .map(x=>`<br><span style="color:${x.color}">●</span> ${esc(x.name)} ${x.ys[i].toFixed(1)}`).join('')});
+  const since=st.cw==='1y'?'1년':st.cw==='3y'?'3년':ymS(xs[0])+'부터';
+  app.querySelector('#cml').innerHTML=S.map(x=>`<div class="cmr"><i style="background:${x.color}"></i><div class="cmb"><div class="nm">${esc(x.name)}</div>
+    <div class="vs">${x.m?`${nw(since+' '+pctH(x.chg))} · ${nw('전고점 대비 '+pctH(x.m.peak))} ${nw('<span class="muted">('+peakSub(x.m)+')</span>')}`:'<span class="muted">거래가 적어 흐름을 못 그려요</span>'}</div></div>
+    ${x.code?`<button class="x" data-cx="${x.code}" aria-label="빼기">✕</button>`:''}</div>`).join('');
+  app.querySelectorAll('[data-cw]').forEach(c=>c.onclick=()=>go({cw:c.dataset.cw}));
+  app.querySelectorAll('[data-cx]').forEach(c=>c.onclick=()=>go({cmp:st.cmp.filter(v=>v!==c.dataset.cx)}));
+  const sel=app.querySelector('#cmpadd'); if(sel) sel.onchange=()=>{ if(sel.value) go({cmp:[...st.cmp, sel.value].slice(0,3)}); };
 }
 
 const HK = () => st.k==='apt' ? ['c3','3개월'] : ['c12','12개월'];   // 빌라는 6개월 묶음이라 3개월 변화가 묽다
@@ -469,6 +554,7 @@ function renderList(app){
   app.innerHTML=`<div class="head"><h1>📈 시장 온도계</h1><button class="hentry" id="hent">🏠 내 집 후보</button>
       <div class="sub">${nw(ymK(SUM.last)+' 계약분까지')} ${info('data')}<br>${nw('서울·경기·인천 '+SUM.regions.length+'곳')} · ${nw('2021년 1월부터')}</div></div>
     ${controls(true)}
+    ${cmpCard()}
     ${weekList(list)}
     <div class="lab">${HK()[1]} 사이 · ${KIND[st.k]} ${info('idx')}</div>
     ${highlights(list)}
@@ -478,7 +564,7 @@ function renderList(app){
       <div class="rtop"><div><span class="rname">${esc(g.n)}</span><span class="rsido">${g.s}</span></div>${m&&m.ok?spark(m.idx,m.c3):''}</div>
       ${m?metricsGrid(m):''}</div>`; }).join('')}
     <div class="foot">· 가격 흐름은 같은 단지·평형끼리만 비교해요.<br>· 숫자가 비어 있으면 거래가 적어서 지어내지 않은 거예요.<br>· 자료: 국토교통부 실거래가 공개시스템</div>`;
-  bindControls(app);
+  bindControls(app); drawCmp(app);
   app.querySelectorAll('[data-r]').forEach(c=>c.onclick=e=>{ e.preventDefault(); go({r:c.dataset.r, d:null, x:null, a:null}); });
   app.querySelector('#hent').onclick=()=>go({v:'home'});
 }
@@ -493,16 +579,17 @@ function tiles(m, peakLabel=true){
     ${t('전세가율', m.jr!=null?Math.round(m.jr*100)+'%':'–', m.jr_n?`${m.jr_n.toLocaleString()}쌍`:'','jr')}
     ${t('거래 3개월', v3.toLocaleString()+'건', vc!=null?`작년보다 <span class="${cls(vc)}">${pct(vc,0)}</span>`:'','vol')}</div>`;
 }
-function charts(app, m, jrs, title){
+function charts(app, m, jrs, title, ref){   // ref = {name, idx, self} — 위 단계(시도·구) 흐름 회색 점선
   const xs=SUM.months;
   const peakI = m.ok ? m.idx.indexOf(Math.max(...m.idx.filter(v=>v!=null))) : -1;
   app.insertAdjacentHTML('beforeend', `
     <div class="card ch"><h3>가격 흐름 ${info('idx')}</h3><div class="cap">같은 집 기준 · 지금 = 100${m.win?` · ${m.win}개월 묶음`:''}${m.win===6&&st.k==='apt'?'(거래가 적어서)':''}</div><div id="c-idx"></div></div>
     <div class="card ch"><h3>월 거래량</h3><div class="cap">매매 · 직거래 포함</div><div id="c-vol"></div></div>
     ${jrs?`<div class="card ch"><h3>전세가율 흐름 ${info('jr')}</h3><div class="cap">같은 단지·평형 전세 ÷ 매매</div><div id="c-jr"></div></div>`:''}`);
-  if(m.ok) lineChart(app.querySelector('#c-idx'), xs, m.idx, {fmtAxis:v=>Math.round(v),
+  if(m.ok) lineChart(app.querySelector('#c-idx'), xs, m.idx, {fmtAxis:v=>Math.round(v), name:ref?ref.self:'', ref:ref?{name:ref.name, ys:ref.idx}:null,
       marks: peakI>=0 && peakI<xs.length-1 ? [{i:peakI, label:`전고점 ${ymS(xs[peakI])}`}] : [],
-      tip:i=>`<b>${ymK(xs[i])}</b><br>지수 ${m.idx[i].toFixed(1)}<br>지금보다 ${pct(m.idx[i]/100-1)}`});
+      tip:i=>`<b>${ymK(xs[i])}</b><br>지수 ${m.idx[i].toFixed(1)}<br>지금보다 ${pct(m.idx[i]/100-1)}`
+        +(ref&&ref.idx[i]!=null?`<br>${esc(ref.name)} ${ref.idx[i].toFixed(1)}`:'')});
   else app.querySelector('#c-idx').innerHTML='<div class="empty">같은 집끼리 비교할 거래가 적어 흐름을 그리지 않아요.</div>';
   barChart(app.querySelector('#c-vol'), xs, m.vol, {tip:i=>`<b>${ymK(xs[i])}</b><br>${m.vol[i].toLocaleString()}건`});
   if(jrs) lineChart(app.querySelector('#c-jr'), xs, jrs.map(v=>v==null?null:v*100), {color:'var(--s2)', fmtAxis:v=>Math.round(v)+'%',
@@ -519,7 +606,8 @@ async function renderRegion(app){
   app.querySelectorAll('[data-wd]').forEach(r=>r.onclick=()=>go({d:r.dataset.wd, x:r.dataset.wx||null, a:r.dataset.wa}));
   const wm=app.querySelector('#wmore'); if(wm) wm.onclick=()=>{ st.wall=true; render(); };
   const D=await det(st.r); const dd=D[st.k];
-  charts(app, m, dd.jrs);
+  const sm=((SUM.sido||[]).find(x=>x.s===g.s)||{})[st.k];
+  charts(app, m, dd.jrs, null, sm&&sm.ok?{name:g.s+' 전체', idx:sm.idx, self:g.n}:null);
   const dongs=dd.dongs.filter(x=>sum(x.vol.slice(-12))>0);
   app.insertAdjacentHTML('beforeend', `<div class="lab">동별 · 최근 12개월 거래 많은 순</div><div class="card" id="dl">${dongs.map(x=>`
     <div class="row" data-d="${esc(x.u)}"><div class="a"><div class="n">${esc(x.u)}</div><div class="m">${nw('12개월 '+sum(x.vol.slice(-12)).toLocaleString()+'건')}${x.jr!=null?' · '+nw('전세가율 '+Math.round(x.jr*100)+'%'):''}</div></div>
@@ -534,7 +622,8 @@ async function renderDong(app){
     <div class="head"><h1>${esc(st.d)} ${KIND[st.k]}</h1><div class="sub">${esc(g.s+' '+g.n)} · ${nw(ymK(SUM.last)+' 계약분까지')}</div></div>
     ${controls(false)}${tiles(m)}`;
   bindControls(app); app.querySelector('#bk').onclick=()=>go({d:null,x:null,a:null}); app.querySelector('#hm').onclick=()=>go({r:null,d:null,x:null,a:null});
-  charts(app, m, null);
+  const gm=g[st.k];
+  charts(app, m, null, null, gm&&gm.ok?{name:g.n+' 전체', idx:gm.idx, self:st.d}:null);
   if(st.k==='apt'){
     const cx=dd.cx.filter(c=>c.umd===st.d);
     let shown=st.all?cx:cx.slice(0,30);
