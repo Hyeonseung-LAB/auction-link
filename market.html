@@ -112,6 +112,10 @@ button{font:inherit;color:inherit}
 .saved{font-size:12px;color:var(--t3);margin-top:8px;min-height:1em}
 .nv+.nv{margin-left:6px}
 .hentry+.hentry{margin-left:6px}
+/* 📈 시장 온도계 ↔ 🏠 내 집 후보 — 두 화면 맨 위에 나란히(11/3 사장님 '둘 다 띄워 줘'), 아래 글과 띄움 */
+.vtabs{display:flex;gap:8px;margin:6px 0 12px;flex-wrap:wrap}
+.vtab{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:8px 15px;font-size:14px;font-weight:800;color:var(--t2);cursor:pointer;white-space:nowrap}
+.vtab.on{background:var(--ink);border-color:var(--ink);color:#fff}
 .nv{display:inline-block;margin-top:8px;padding:3px 10px;border-radius:999px;border:1.5px solid #03c75a;color:#03c75a;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap}
 .askrow{display:flex;gap:6px;margin-top:10px}
 .askrow input{flex:1;min-width:0;font:inherit;font-size:15px;font-weight:700;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px}
@@ -583,21 +587,26 @@ function homeRows(){
   const k=c.sort||'dist', f={dist:x=>x.dist, cheap:x=>x.b[0], deal:x=>-x.b[1], new:x=>-(x.r[6]||0), drop:x=>x.b[0]/x.b[2], time:x=>x.ct??999}[k]||(x=>x.dist);
   return out.sort((a,b)=>f(a)-f(b));
 }
+// 📈 시장 온도계 ↔ 🏠 내 집 후보 단추(11/3) — 지금 보는 쪽이 까만 단추
+const vtabs=cur=>`<div class="vtabs"><button class="vtab${cur==='list'?' on':''}" data-vt="list">📈 시장 온도계</button>`
+  +`<button class="vtab${cur==='home'?' on':''}" data-vt="home">🏠 내 집 후보</button></div>`;
+function bindVtabs(root){ root.querySelectorAll('[data-vt]').forEach(b=>b.onclick=()=>{ if(b.classList.contains('on')) return;
+  go({v:b.dataset.vt==='home'?'home':null, r:null, d:null, x:null, a:null}); }); }
 async function renderHome(app){
   app.innerHTML='<div class="empty">불러오는 중…</div>';
   await loadHome();
-  const c=COND, nav=`<div class="nav"><button class="back" id="bk">← 시장 온도계</button></div>`;
+  const c=COND, nav=vtabs('home');
   if(!c.plans||!c.plans.length){
     const why=!CDB?'구글 시트에 연결이 안 돼요.<br>조건(예산·근무지)은 시트에만 있어서 연결돼야 보여요.<br>잠시 뒤 다시 열어 보세요.'
       :!CKEY?'🔑 이 기기엔 두 번째 열쇠가 없어요.<br>조건(예산·근무지)은 개인 값이라 열쇠가 있는 기기에서만 보여요.<br>사장님 열쇠 링크를 이 기기에서 한 번 열어 주세요.'
       :'조건이 아직 없어요.<br>예산·근무지는 우리 구글 시트에만 두고 여기서 읽어요.';
-    noMap(); app.innerHTML=nav+`<div class="head"><h1>🏠 내 집 후보</h1></div><div class="card"><div class="empty">${why}</div></div>`;
-    app.querySelector('#bk').onclick=()=>go({v:null}); return; }
+    noMap(); app.innerHTML=`<div class="head">${nav}</div><div class="card"><div class="empty">${why}</div></div>`;
+    bindVtabs(app); return; }
   const rows=homeRows(), show=st.all?rows:rows.slice(0,40);
   const opt=(v,list)=>list.map(([x,t])=>`<option value="${x}"${String(v)===String(x)?' selected':''}>${t}</option>`).join('');
   const P0=c.plans[c.plan||0];
   const CTOK=!!commuteTable(P0);
-  app.innerHTML=nav+`<div class="head"><h1>🏠 내 집 후보</h1><div class="sub">${nw(ymK(HOMES.last)+' 계약분까지')} · ${nw('아파트 실거래 기준')}</div></div>
+  app.innerHTML=`<div class="head">${nav}<div class="sub">${nw(ymK(HOMES.last)+' 계약분까지')} · ${nw('아파트 실거래 기준')}</div></div>
     <div class="chips">${c.plans.map((p,i)=>`<button class="chip ${(c.plan||0)===i?'on':''}" data-plan="${i}">${esc(p.name)}</button>`).join('')}</div>
     <div class="card"><div class="cond">
       <label>평형<select data-c="band">${opt(c.band||'both',[['both','59·84 둘 다'],['59','59㎡대'],['84','84㎡대']])}</select></label>
@@ -619,7 +628,7 @@ async function renderHome(app){
         <div class="b"><div class="p">${nw(x.bd+'㎡대 '+man(b[0]))}</div><div class="m">${nw('1년 '+b[1]+'건')}</div><div class="m">${nw('최고가 대비 ')}${pctH(dr,0)}</div></div></div>`; }).join('')||'<div class="empty">조건에 맞는 단지가 없어요.<br>조건을 넓혀 보세요.</div>'}
       ${rows.length>show.length?`<button class="more" id="more">${(rows.length-show.length).toLocaleString()}곳 더 보기</button>`:''}</div>
     <div class="foot">· 값은 최근 12개월 중개거래 중위가예요(직거래 빼고).<br>· 역까지 걸어서 = 가까운 지하철역 직선거리로 어림한 값(추정)이에요.<br>· 버스도 가까운 정류장 직선거리로 어림해요.<br>· 경기 단지 버스는 하루 1,000곳씩 채우는 중이라 '확인 중'이 보일 수 있어요.<br>· 인천은 버스 자료가 없어요.<br>· 조건은 우리 구글 시트에만 저장돼요.<br>· 조건은 두 번째 열쇠가 있는 기기에서만 보이고 저장돼요.<br>· 지도 바탕은 오픈스트리트맵이에요(근무지는 이 화면에서만 그려요).${!SUBW?'':(CTOK?'':'<br>· 이 근무지는 1.2km 안에 역이 없어 지하철 출퇴근 시간을 안 셌어요.')+'<br>· 🕒 출퇴근 = 지하철만 어림한 값(추정)이에요.<br>· 걸어서 역까지 + 기다림 3분 + 역 사이 + 갈아타기 5분(GTX 8분) + 내려서 걸어서로 셌어요.<br>· 역 사이 시간은 거리로 어림했고 급행·버스는 안 셌어요.<br>· 역 순서 자료: © OpenStreetMap 기여자'}</div>`;
-  app.querySelector('#bk').onclick=()=>go({v:null});
+  bindVtabs(app);
   app.querySelectorAll('[data-plan]').forEach(b=>b.onclick=()=>{ c.plan=+b.dataset.plan; saveCond(); render(); });
   app.querySelectorAll('[data-sort]').forEach(b=>b.onclick=()=>{ c.sort=b.dataset.sort; saveCond(); render(); });
   app.querySelectorAll('[data-c]').forEach(sel=>sel.onchange=()=>{ const k=sel.dataset.c, v=sel.value;
@@ -767,7 +776,7 @@ function setSheet(fr){ const sh=document.getElementById('msheet'); if(!sh) retur
 function renderList(app){
   const list=SUM.regions.filter(g=>st.f==='전체'||g.s===st.f);
   const sorted=list.slice().sort((a,b)=>sortVal(b)-sortVal(a));
-  app.innerHTML=`<div class="head"><h1>📈 시장 온도계</h1><button class="hentry" id="hent">🏠 내 집 후보</button>
+  app.innerHTML=`<div class="head">${vtabs('list')}
       <div class="sub">${nw(ymK(SUM.last)+' 계약분까지')} ${info('data')}<br>${nw('서울·경기·인천 '+SUM.regions.length+'곳')} · ${nw('2021년 1월부터')}</div></div>
     ${controls(true)}
     ${cmpCard()}
@@ -782,7 +791,7 @@ function renderList(app){
     <div class="foot">· 가격 흐름은 같은 단지·평형끼리만 비교해요.<br>· 숫자가 비어 있으면 거래가 적어서 지어내지 않은 거예요.<br>· 자료: 국토교통부 실거래가 공개시스템</div>`;
   bindControls(app); drawCmp(app);
   app.querySelectorAll('[data-r]').forEach(c=>c.onclick=e=>{ e.preventDefault(); go({r:c.dataset.r, d:null, x:null, a:null}); });
-  app.querySelector('#hent').onclick=()=>go({v:'home'});
+  bindVtabs(app);
   setLbl(`📈 시장 온도계 <span>${KIND[st.k]} · ${list.length}곳</span>`); listMap(list);
 }
 
