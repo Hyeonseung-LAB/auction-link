@@ -110,6 +110,8 @@ button{font:inherit;color:inherit}
 .cond label{font-size:12px;color:var(--t3);font-weight:700;display:flex;flex-direction:column;gap:4px}
 .cond select{font:inherit;font-size:14px;font-weight:700;color:var(--t1);border:1.5px solid var(--line);border-radius:10px;padding:7px 8px;background:#fff;width:100%}
 .saved{font-size:12px;color:var(--t3);margin-top:8px;min-height:1em}
+.nv+.nv{margin-left:6px}
+.hentry+.hentry{margin-left:6px}
 .nv{display:inline-block;margin-top:8px;padding:3px 10px;border-radius:999px;border:1.5px solid #03c75a;color:#03c75a;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap}
 .askrow{display:flex;gap:6px;margin-top:10px}
 .askrow input{flex:1;min-width:0;font:inherit;font-size:15px;font-weight:700;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px}
@@ -629,7 +631,8 @@ async function drawHomeMap(el, leg, rows, plan){
     const html=`<div class="hpop"><b>${esc(r[3])}</b><br>${esc(r[1])}${r[6]?' · '+r[6]+'년':''}`
       +`${r[7]?'<br>🚇 '+esc(r[7].replace(/ .*$/,''))+' 약 '+c.xs[0].w+'분':''}${r[11]?'<br>🚌 '+esc(r[11])+' 약 '+c.xs[0].bw+'분':''}`
       +`<br>🏢 ${esc(c.xs[0].to)} ${c.xs[0].dist.toFixed(1)}km${c.xs[0].ct!=null?` · 🕒 약 ${c.xs[0].ct}분`:''}<br>${lines}`
-      +`<br><a href="#" class="go" data-go="${r[0]}|${esc(r[1])}|${esc(r[2])}|${c.xs[0].bd}">단지 보기 →</a></div>`;
+      +`<br><a href="#" class="go" data-go="${r[0]}|${esc(r[1])}|${esc(r[2])}|${c.xs[0].bd}">단지 보기 →</a>`
+      +` <a href="#" class="go" data-nm="https://map.naver.com/p/search/${encodeURIComponent(((SUM.regions.find(g=>g.c===r[0])||{}).n||'')+' '+r[1]+' '+r[3])}">네이버 지도 →</a></div>`;
     L.circleMarker([r[5],r[4]],{radius:cs.length>300?5:6.5, color:'#fff', weight:1.5, fillColor:COL[tier(c.p)], fillOpacity:.92}).bindPopup(html).addTo(map); }
   const pins=[];
   for(const p of (plan.pts||[])){ pts.push([p.lat,p.lng]);
@@ -638,7 +641,9 @@ async function drawHomeMap(el, leg, rows, plan){
     L.marker([p.lat,p.lng],{icon:L.divIcon({className:'', html:`<span class="hpin">🏢 ${esc(p.n)}</span>`, iconSize:null, iconAnchor:near?[14,-8]:[14,12]}), zIndexOffset:1000}).addTo(map); }
   if(pts.length) map.fitBounds(pts,{padding:[24,24], maxZoom:14}); else map.setView([37.55,126.99],10);
   map.on('popupopen', e=>{ const a=e.popup.getElement().querySelector('[data-go]'); if(a) a.onclick=ev=>{ ev.preventDefault();
-    const [sgg,u,j,bd]=a.dataset.go.split('|'); go({v:null, r:sgg, d:u, x:j, a:bd}); }; });
+    const [sgg,u,j,bd]=a.dataset.go.split('|'); go({v:null, r:sgg, d:u, x:j, a:bd}); };
+    // 네이버 지도(길찾기·거리뷰용) — 지도 창은 바깥으로 클릭을 안 넘겨서 여기서 직접 연다
+    const nm=e.popup.getElement().querySelector('[data-nm]'); if(nm) nm.onclick=ev=>{ ev.preventDefault(); window.open(nm.dataset.nm,'_blank','noopener'); }; });
   el.dataset.n=cs.length; el.__map=map;             // 시험용: 찍은 단지 수·지도
   if(leg) leg.innerHTML=cs.length?[[0,`싼 편(${eok(q1)} 이하)`],[1,'중간'],[2,`비싼 편(${eok(q2)} 넘게)`]].map(([i,t])=>`<span><i style="background:${COL[i]}"></i>${nw(t)}</span>`).join('')
     +`<span>${nw('🏢 근무지 · 점선 '+(plan.km||10)+'km')}</span><span>${nw('점 '+cs.length.toLocaleString()+'곳')}</span>`:'<span>조건에 맞는 단지가 없어요</span>';
@@ -647,7 +652,7 @@ async function drawHomeMap(el, leg, rows, plan){
 function renderList(app){
   const list=SUM.regions.filter(g=>st.f==='전체'||g.s===st.f);
   const sorted=list.slice().sort((a,b)=>sortVal(b)-sortVal(a));
-  app.innerHTML=`<div class="head"><h1>📈 시장 온도계</h1><button class="hentry" id="hent">🏠 내 집 후보</button>
+  app.innerHTML=`<div class="head"><h1>📈 시장 온도계</h1><button class="hentry" id="hent">🏠 내 집 후보</button><button class="hentry" id="hmapgo">🗺 후보 지도</button>
       <div class="sub">${nw(ymK(SUM.last)+' 계약분까지')} ${info('data')}<br>${nw('서울·경기·인천 '+SUM.regions.length+'곳')} · ${nw('2021년 1월부터')}</div></div>
     ${controls(true)}
     ${cmpCard()}
@@ -662,7 +667,8 @@ function renderList(app){
     <div class="foot">· 가격 흐름은 같은 단지·평형끼리만 비교해요.<br>· 숫자가 비어 있으면 거래가 적어서 지어내지 않은 거예요.<br>· 자료: 국토교통부 실거래가 공개시스템</div>`;
   bindControls(app); drawCmp(app);
   app.querySelectorAll('[data-r]').forEach(c=>c.onclick=e=>{ e.preventDefault(); go({r:c.dataset.r, d:null, x:null, a:null}); });
-  app.querySelector('#hent').onclick=()=>go({v:'home'});
+  app.querySelector('#hent').onclick=()=>go({v:'home', hv:''});
+  app.querySelector('#hmapgo').onclick=()=>go({v:'home', hv:'map'});      // 🗺 후보 지도 바로가기(11/3 사장님)
 }
 
 function tiles(m, peakLabel=true){
@@ -802,7 +808,7 @@ async function renderComplex(app){
   const P=((await pts(st.r, D.apt.cf[c.umd]))[c.jibun]||{})[String(b.a)]||{p:[],r:[]};
   app.innerHTML=`<div class="nav"><button class="back" id="bk">← ${esc(st.d)}</button><button class="home" id="hm">📈 처음</button></div>
     <div class="head"><h1>${esc(c.name)}</h1><div class="sub">${esc(g.n+' '+c.umd+' '+c.jibun)}${c.built?' · '+c.built+'년':''}</div>
-      <span class="nv" data-u="https://m.land.naver.com/search/result/${encodeURIComponent(g.n+' '+c.umd+' '+c.name)}">네이버 매물 →</span></div>
+      <span class="nv" data-u="https://m.land.naver.com/search/result/${encodeURIComponent(g.n+' '+c.umd+' '+c.name)}">네이버 매물 →</span><span class="nv" data-u="https://map.naver.com/p/search/${encodeURIComponent(g.n+' '+c.umd+' '+c.name)}">🗺 지도 →</span></div>
     <div class="tabs2">${bands.map(x=>`<button class="chip ${x===b?'on':''}" data-a="${x.a}">${x.a}㎡ · ${x.n}건</button>`).join('')}</div>
     <div class="tiles two">
       <div class="tile"><div class="k">최근 거래</div><div class="v">${man(b.last[0])}</div><div class="s">${dK(b.last[1])}</div></div>
