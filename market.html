@@ -121,6 +121,16 @@ button{font:inherit;color:inherit}
 .vtabs{display:flex;gap:8px;margin:6px 0 12px;flex-wrap:wrap}
 .vtab{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:8px 15px;font-size:14px;font-weight:800;color:var(--t2);cursor:pointer;white-space:nowrap}
 .vtab.on{background:var(--ink);border-color:var(--ink);color:#fff}
+/* ❓ 사용법 창(11/3) — 폰은 아래에서 올라오는 판, PC 는 가운데 */
+.vtabs .hlp{margin-left:auto;border:1.5px solid var(--line);background:#fff;border-radius:999px;width:38px;height:38px;font-size:16px;cursor:pointer;flex:0 0 auto}
+.hmodal{position:fixed;inset:0;z-index:3000;background:rgba(20,25,35,.45);display:flex;align-items:flex-end;justify-content:center}
+.hmodal .hbox{background:#fff;width:100%;max-width:560px;max-height:86vh;overflow-y:auto;border-radius:18px 18px 0 0;padding:16px 18px 26px;box-shadow:0 -6px 24px rgba(0,0,0,.18)}
+@media(min-width:761px){.hmodal{align-items:center}.hmodal .hbox{border-radius:18px}}
+.hbox .ht{display:flex;align-items:center;justify-content:space-between;font-size:17px;font-weight:800;margin-bottom:4px}
+.hbox .hx{border:0;background:var(--soft);border-radius:10px;width:34px;height:34px;font-size:16px;cursor:pointer}
+.hbox h4{font-size:14.5px;margin:14px 0 4px;color:var(--t1)}
+.hbox ul{margin:0;padding-left:18px}
+.hbox li{font-size:13.5px;line-height:1.6;color:var(--t2);margin:2px 0;word-break:keep-all}
 .nv{display:inline-block;margin-top:8px;padding:3px 10px;border-radius:999px;border:1.5px solid #03c75a;color:#03c75a;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap}
 .askrow{display:flex;gap:6px;margin-top:10px}
 .askrow input{flex:1;min-width:0;font:inherit;font-size:15px;font-weight:700;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px}
@@ -647,10 +657,41 @@ function homeRows(){
   const k=c.sort||'dist', f={dist:x=>x.dist, cheap:x=>x.b[0], deal:x=>-x.b[1], new:x=>-(x.r[6]||0), drop:x=>x.b[0]/x.b[2], time:x=>x.ct??999}[k]||(x=>x.dist);
   return out.sort((a,b)=>f(a)-f(b));
 }
+// ❓ 사용법(11/3) — 기능이 많아져서 한곳에 모음. 한 줄에 한 가지
+const HELP=[
+  ['📈 시장 온도계',['서울·경기·인천 81곳의 아파트·빌라 실거래 흐름이에요(국토부 공개 자료).',
+    '신고는 계약 뒤 30일 안이라, 다 찬 달까지만 써요.',
+    '지도 동그라미 색 = 오름(빨강)·내림(파랑), 크기 = 거래 수예요.',
+    '동그라미를 누르면 목록에서 그 구가 반짝여요.',
+    '📊 흐름 비교 = 서울·경기·인천에 고른 구를 3곳까지 겹쳐 봐요.',
+    '[가격][거래량][🔥 신고가][전세가율] 단추로 견줄 숫자를 바꿔요.',
+    '📰 이번 주 = 매주 월요일, 지난주에 새로 신고된 거래예요.']],
+  ['구 → 동 → 단지',['구 화면 지도: 아파트는 단지 점(색 = 최고가 대비), 빌라는 동 동그라미예요.',
+    '가격 흐름의 회색 점선 = 시도 전체예요(동 화면은 구 전체).',
+    '단지 화면: 평형별 실거래 점, 🔥 = 그때까지 최고가예요.',
+    '💬 이 값이면 급매일까? = 본 호가를 넣으면 최근 3개월 같은 평형·층대 거래와 견줘요.',
+    '네이버 매물 → · 🗺 지도 → = 네이버로 바로 가요.',
+    '☆ 관심 = 누르면 그 단지 새 실거래를 매일 09:30 개인 채팅으로 보내요.']],
+  ['🏠 내 집 후보',['조건(예산·근무지 등)은 구글 시트에만 있어요.',
+    '두 번째 열쇠가 있는 기기에서만 보이고 저장돼요.',
+    '지도 점 색 = 지금 보이는 후보 안에서 싼 편·중간·비싼 편이에요.',
+    '🚇 역·🚌 버스까지 걸어서 = 직선거리로 어림한 값이에요.',
+    '🕒 출퇴근 = 지하철만 어림했어요(기다림 3분·갈아타기 5분, 버스는 안 셈).',
+    '⭐ 관심 단지는 목록과 지도 ⭐로 보여요.',
+    '매일 09:30 개인 채팅: 후보 단지 경매 알림, 관심 단지 새 실거래 알림.']],
+  ['폰에서',['목록은 아래 시트예요.',
+    '손잡이를 끌면 접기·반·전체로 붙어요.',
+    '손잡이를 톡 누르면 접기 ↔ 반으로 바뀌어요.']]];
+function openHelp(){ const d=document.createElement('div'); d.className='hmodal';
+  d.innerHTML=`<div class="hbox" role="dialog" aria-label="사용법"><div class="ht">❓ 사용법<button class="hx" aria-label="닫기">✕</button></div>`
+    +HELP.map(([h,ls])=>`<h4>${h}</h4><ul>${ls.map(x=>`<li>${x}</li>`).join('')}</ul>`).join('')+`</div>`;
+  const close=()=>d.remove();
+  d.addEventListener('click',e=>{ if(e.target===d||e.target.closest('.hx')) close(); });
+  document.body.appendChild(d); }
 // 📈 시장 온도계 ↔ 🏠 내 집 후보 단추(11/3) — 지금 보는 쪽이 까만 단추
 const vtabs=cur=>`<div class="vtabs"><button class="vtab${cur==='list'?' on':''}" data-vt="list">📈 시장 온도계</button>`
-  +`<button class="vtab${cur==='home'?' on':''}" data-vt="home">🏠 내 집 후보</button></div>`;
-function bindVtabs(root){ root.querySelectorAll('[data-vt]').forEach(b=>b.onclick=()=>{ if(b.classList.contains('on')) return;
+  +`<button class="vtab${cur==='home'?' on':''}" data-vt="home">🏠 내 집 후보</button><button class="hlp" data-help="1" aria-label="사용법">❓</button></div>`;
+function bindVtabs(root){ root.querySelectorAll('[data-help]').forEach(b=>b.onclick=openHelp); root.querySelectorAll('[data-vt]').forEach(b=>b.onclick=()=>{ if(b.classList.contains('on')) return;
   go({v:b.dataset.vt==='home'?'home':null, r:null, d:null, x:null, a:null}); }); }
 async function renderHome(app){
   app.innerHTML='<div class="empty">불러오는 중…</div>';
