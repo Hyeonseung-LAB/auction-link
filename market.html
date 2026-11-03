@@ -116,6 +116,15 @@ button{font:inherit;color:inherit}
 .wst.on{background:#fff4c7}
 .wmsg{font-size:12px;color:var(--t2);margin-top:6px;line-height:1.5}
 .wpin{font-size:17px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+/* 🔨 지금 경매 중(11/3) */
+.auc{border:1.5px solid #f2c94c}
+.auc h3{font-size:15px;margin:0 0 2px;font-weight:800}
+.arow{padding:9px 0;border-top:1px solid var(--line);font-size:13.5px;line-height:1.55}
+.auc h3+.arow{border-top:0}
+.auc .cap{font-size:12px;color:var(--t3);margin-top:6px;line-height:1.5}
+.arow .m{font-size:12.5px;color:var(--t2)}
+.nv.ak{border-color:#e2a400;color:#a87e00}
+.apin{font-size:15px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))}
 .hentry+.hentry{margin-left:6px}
 /* 📈 시장 온도계 ↔ 🏠 내 집 후보 — 두 화면 맨 위에 나란히(11/3 사장님 '둘 다 띄워 줘'), 아래 글과 띄움 */
 .vtabs{display:flex;gap:8px;margin:6px 0 12px;flex-wrap:wrap}
@@ -179,6 +188,17 @@ body.mapmode .mmap .leaflet-tile-pane{filter:grayscale(.85) brightness(1.08) con
 const BASE = 'market/';
 let SUM = null;                       // summary.json
 let WEEK;                              // week.json(📰 이번 주 신고분) — 없으면 null
+let AUC;                               // auction.json(🔨 지금 경매 중, 매일 09:30) — 없으면 null
+const aucOf = k => (AUC&&AUC.items&&AUC.items[k])||[];
+const aucIn = code => { if(!AUC||!AUC.items) return 0; let n=0; for(const k in AUC.items) if(k.startsWith(code+'|')) n+=AUC.items[k].length; return n; };
+const sdK = s => s&&s.length===8 ? (+s.slice(4,6))+'/'+(+s.slice(6,8)) : '';
+// 지도 창 — 그 단지 경매들(입찰 빠른 순) + 단지 보기 · 경매 보기
+function aucPop(r, au){ return `<div class="hpop"><b>🔨 ${esc(r[3])}</b><br>`
+  +au.map(x=>`${sdK(x.s)} 입찰 · 최저 <b>${man(x.b/1e4)}</b>${x.f?` · 유찰 ${x.f}회`:''}`).join('<br>')
+  +`<br><a href="#" class="go" data-go="${r[0]}|${esc(r[1])}|${esc(r[2])}|">단지 보기 →</a>`
+  +(au[0].u?` <a href="#" class="go" data-nm="${esc(au[0].u)}">경매 보기 →</a>`:'')+`</div>`; }
+const aucMark = (L, lay, r, au) => L.marker([r[5],r[4]],{icon:L.divIcon({className:'', html:'<span class="apin">🔨</span>', iconSize:null, iconAnchor:[-2,18]}), zIndexOffset:800})
+  .bindPopup(aucPop(r, au)).addTo(lay);
 const DET = {};                       // 구코드 → 상세 json
 const st = {k:'apt', f:'전체', o:'c3', r:null, d:null, x:null, a:null, all:false, cmp:[], cw:'', cm:''};
 const KIND = {apt:'아파트', rh:'빌라'};
@@ -727,6 +747,7 @@ async function renderHome(app){
       return `<div class="row" data-h="${r[0]}|${esc(r[1])}|${esc(r[2])}|${x.bd}"><div class="a"><div class="n">${esc(r[3])}</div>
         <div class="m">${nw(esc(r[1]))}${r[6]?' · '+nw(r[6]+'년'):''}${r[7]?' · '+nw('🚇 '+esc(r[7].replace(/ .*$/,''))+' 약 '+x.w+'분'):''}</div>
         <div class="m">${r[11]?nw('🚌 '+esc(r[11])+' 약 '+x.bw+'분'):(r[12]===-1?nw('🚌 가까운 정류장 없음'):(r[0].startsWith('28')?'':nw('🚌 확인 중')))}</div>
+        ${aucOf(r[0]+'|'+r[1]+'|'+r[2]).length?`<div class="m">${nw('🔨 지금 경매 중 '+aucOf(r[0]+'|'+r[1]+'|'+r[2]).length+'건')}</div>`:''}
         <div class="m">${nw('🏢 '+esc(x.to)+' '+x.dist.toFixed(1)+'km')}${x.ct!=null?' · '+nw('🕒 약 '+x.ct+'분'):''}${b[3]?' · '+nw('전세가율 '+b[3]+'%'):''}</div></div>
         <div class="b"><div class="p">${nw(x.bd+'㎡대 '+man(b[0]))}</div><div class="m">${nw('1년 '+b[1]+'건')}</div><div class="m">${nw('최고가 대비 ')}${pctH(dr,0)}</div></div></div>`; }).join('')||'<div class="empty">조건에 맞는 단지가 없어요.<br>조건을 넓혀 보세요.</div>'}
       ${rows.length>show.length?`<button class="more" id="more">${(rows.length-show.length).toLocaleString()}곳 더 보기</button>`:''}</div>
@@ -806,6 +827,7 @@ function listMap(list){ const [K,KN]=HK();
       L.circleMarker(ll,{radius:6, r0:5+Math.min(13,Math.sqrt(n3)/2.5), color:'#fff', weight:1.5, fillColor:chgCol(v), fillOpacity:.88})
         .bindPopup(`<div class="hpop"><b>${esc(g.n)}</b> <span class="muted">${g.s}</span><br>${KIND[st.k]} ${KN} ${m.ok?pctH(v):'<span class="muted">표본 적음</span>'}`
           +`${m.ok&&K!=='c12'?'<br>12개월 '+pctH(m.c12):''}<br>전고점 대비 ${m.ok?pctH(m.peak):'–'}<br>거래 3개월 ${n3.toLocaleString()}건`
+          +`${st.k==='apt'&&aucIn(g.c)?'<br>🔨 경매 중 '+aucIn(g.c)+'건':''}`
           +`<br><a href="#" class="go" data-gr="${g.c}">자세히 →</a></div>`)
         .on('click',()=>focusRow(`.card.tap[data-r="${g.c}"]`)).addTo(lay); }
     return pts; }, `<b>${KIND[st.k]} ${KN}</b><i style="background:#e34948"></i>오름<i style="background:#2a78d6"></i>내림<i style="background:#b0b8c1"></i>보합<br>크기 = 최근 3개월 거래 수`);
@@ -825,7 +847,8 @@ async function regionMap(g, dd, dongs){
             +`<br>최고가 대비 ${pctH(dr,0)} · 5년 ${c.n.toLocaleString()}건`
             +`<br><a href="#" class="go" data-go="${g.c}|${esc(c.umd)}|${esc(c.jibun)}|${b.a}">단지 보기 →</a> <a href="#" class="go" data-nm="${NMAP(g.n+' '+c.umd+' '+c.name)}">네이버 지도 →</a></div>`)
           .on('click',()=>focusRow(`#dl [data-d="${c.umd}"]`)).addTo(lay); }
-      return pts; }, `<b>최고가 대비</b><i style="background:#e34948"></i>5% 안<i style="background:#f59e0b"></i>5~15%↓<i style="background:#16a34a"></i>15%↓ 넘게<br>점 = 단지(가장 많이 팔린 평형)`);
+      for(const r of rows){ const au=aucOf(r[0]+'|'+r[1]+'|'+r[2]); if(au.length) aucMark(L, lay, r, au); }
+      return pts; }, `<b>최고가 대비</b><i style="background:#e34948"></i>5% 안<i style="background:#f59e0b"></i>5~15%↓<i style="background:#16a34a"></i>15%↓ 넘게<br>점 = 단지(가장 많이 팔린 평형) · 🔨 = 지금 경매 중`);
   }
   const cen={}; for(const r of rows) (cen[r[1]]=cen[r[1]]||[]).push(r);
   const med=a=>{ const x=a.slice().sort((p,q)=>p-q); return x[Math.floor(x.length/2)]; };
@@ -860,6 +883,7 @@ function homeMap(rows, plan){
       const near=pins.some(q=>km([q.lng,q.lat],[p.lng,p.lat])<3); pins.push(p);   // 기흥·화성처럼 가까우면 이름표를 점 아래로
       L.circle([p.lat,p.lng],{radius:(plan.km||10)*1000, color:'#191f28', weight:1.2, dashArray:'5 5', fill:false, interactive:false}).addTo(lay);
       L.marker([p.lat,p.lng],{icon:L.divIcon({className:'', html:`<span class="hpin">🏢 ${esc(p.n)}</span>`, iconSize:null, iconAnchor:near?[14,-8]:[14,12]}), zIndexOffset:1000}).addTo(lay); }
+    for(const c of cs){ const au=aucOf(c.r[0]+'|'+c.r[1]+'|'+c.r[2]); if(au.length) aucMark(L, lay, c.r, au); }
     for(const w of ((COND&&COND.watch)||[])){ const r=HOMES.rows.find(x=>x[0]+'|'+x[1]+'|'+x[2]===w.k); if(!r) continue;
       L.marker([r[5],r[4]],{icon:L.divIcon({className:'', html:'<span class="wpin">⭐</span>', iconSize:null, iconAnchor:[9,10]}), zIndexOffset:900})
         .bindPopup(`<div class="hpop"><b>⭐ ${esc(w.n||r[3])}</b><br>${esc(r[1])}${r[6]?' · '+r[6]+'년':''}<br><a href="#" class="go" data-go="${r[0]}|${esc(r[1])}|${esc(r[2])}|">단지 보기 →</a></div>`).addTo(lay); }
@@ -1037,6 +1061,16 @@ async function askRemove(key, at){ const db=await askDB(); if(!db) return [];
 function askListHtml(list){ if(!list||!list.length) return '';
   return '<div class="lab" style="margin-top:12px">넣어 본 값</div>'+list.map(x=>`<div class="row" style="cursor:default"><div class="a"><div class="n">${nw(man(x.v))}${x.fl?' · '+(x.fl==='low'?'1~3층':'4층 이상'):''}</div><div class="m">${nw(esc(x.at.slice(0,10)))} · ${esc(x.verdict||'')}</div></div><div class="b">${canSave()?`<button class="home" data-del="${esc(x.at)}">✕</button>`:''}</div></div>`).join(''); }
 
+// 🔨 지금 경매 중(11/3) — 경매 사이트 목록(매일 아침)에서 이 단지와 구·동·지번이 같은 물건. 최저가를 최근 실거래 기준(💬 와 같은 셈)과 견줌
+function aucCard(AU, PA){ if(!AU.length) return '';
+  return `<div class="card auc"><h3>🔨 지금 경매 중 ${AU.length}건</h3>`+AU.map(x=>{
+    const bd=String(Math.floor(parseFloat(x.ar)||0)), pp=((PA[bd]||{}).p)||[], j=pp.length?judgeAsk(pp, Math.round(x.b/1e4), ''):null;
+    const rt=j&&j.refN>=3&&j.ref?Math.round(x.b/1e4/j.ref*100):null;
+    return `<div class="arow"><div><b>${nw(sdK(x.s)+' 입찰')}</b> · ${nw('최저 '+man(x.b/1e4))}${x.f?' '+nw('(유찰 '+x.f+'회)'):''}</div>`
+      +`<div class="m">${nw('감정 '+man(x.a/1e4))} · ${nw(esc(x.ar))}</div>`
+      +(rt?`<div class="m">${nw('최저가 = '+j.refWhat+' 실거래 중위 '+man(j.ref)+'의 '+rt+'%')}</div>`:'')
+      +(x.u?`<span class="nv ak" data-u="${esc(x.u)}">경매 보기 →</span>`:'')+`</div>`; }).join('')
+    +`<div class="cap">경매 사이트 목록(매일 아침)에서 이 단지와 동·지번이 같은 물건이에요.</div></div>`; }
 async function renderComplex(app){
   noMap();
   const g=SUM.regions.find(x=>x.c===st.r); const D=await det(st.r);
@@ -1044,10 +1078,12 @@ async function renderComplex(app){
   const bands=c.bands.slice().sort((a,b)=>a.a-b.a);
   const b=bands.find(x=>String(x.a)===st.a) || bands.slice().sort((p,q)=>q.n-p.n)[0];
   const dr=b.last[0]/b.max[0]-1, jr=b.jeon&&b.rec?b.jeon/b.rec:null;
-  const P=((await pts(st.r, D.apt.cf[c.umd]))[c.jibun]||{})[String(b.a)]||{p:[],r:[]};
+  const PA=(await pts(st.r, D.apt.cf[c.umd]))[c.jibun]||{}, P=PA[String(b.a)]||{p:[],r:[]};
+  const AU=aucOf(`${st.r}|${c.umd}|${c.jibun}`);
   app.innerHTML=`<div class="nav"><button class="back" id="bk">← ${esc(st.d)}</button><button class="home" id="hm">📈 처음</button></div>
     <div class="head"><h1>${esc(c.name)}</h1><div class="sub">${esc(g.n+' '+c.umd+' '+c.jibun)}${c.built?' · '+c.built+'년':''}</div>
       <span class="nv" data-u="https://m.land.naver.com/search/result/${encodeURIComponent(g.n+' '+c.umd+' '+c.name)}">네이버 매물 →</span><span class="nv" data-u="https://map.naver.com/p/search/${encodeURIComponent(g.n+' '+c.umd+' '+c.name)}">🗺 지도 →</span><span class="wst" id="wst">☆ 관심</span><div class="wmsg" id="csaved"></div></div>
+    ${aucCard(AU, PA)}
     <div class="tabs2">${bands.map(x=>`<button class="chip ${x===b?'on':''}" data-a="${x.a}">${x.a}㎡ · ${x.n}건</button>`).join('')}</div>
     <div class="tiles two">
       <div class="tile"><div class="k">최근 거래</div><div class="v">${man(b.last[0])}</div><div class="s">${dK(b.last[1])}</div></div>
@@ -1097,6 +1133,7 @@ async function render(){
   try{
     if(!SUM) SUM=await getJSON(BASE+'summary.json');
     if(WEEK===undefined){ try{ WEEK=await getJSON(BASE+'week.json'); }catch(e){ WEEK=null; } }
+    if(AUC===undefined){ try{ AUC=await getJSON(BASE+'auction.json'); }catch(e){ AUC=null; } }
     if(!st.r && st.v==='home') await renderHome(app);
     else if(!st.r) renderList(app);
     else if(st.k==='apt' && st.d && st.x) await renderComplex(app);
