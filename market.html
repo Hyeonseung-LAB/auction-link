@@ -111,6 +111,11 @@ button{font:inherit;color:inherit}
 .cond select{font:inherit;font-size:14px;font-weight:700;color:var(--t1);border:1.5px solid var(--line);border-radius:10px;padding:7px 8px;background:#fff;width:100%}
 .saved{font-size:12px;color:var(--t3);margin-top:8px;min-height:1em}
 .nv+.nv{margin-left:6px}
+/* ⭐ 관심 단지(11/3) — 단지 화면 단추 · 지도 별 */
+.wst{display:inline-block;margin:8px 0 0 6px;padding:3px 10px;border-radius:999px;border:1.5px solid #e2b007;color:#a87e00;background:#fff;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap}
+.wst.on{background:#fff4c7}
+.wmsg{font-size:12px;color:var(--t2);margin-top:6px;line-height:1.5}
+.wpin{font-size:17px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
 .hentry+.hentry{margin-left:6px}
 /* 📈 시장 온도계 ↔ 🏠 내 집 후보 — 두 화면 맨 위에 나란히(11/3 사장님 '둘 다 띄워 줘'), 아래 글과 띄움 */
 .vtabs{display:flex;gap:8px;margin:6px 0 12px;flex-wrap:wrap}
@@ -520,18 +525,22 @@ const HB={59:9, 84:10};                       // homes.json 줄에서 평형대 
 function km(a,b){ const R=6371, t=x=>x*Math.PI/180, dl=t(b[1]-a[1]), dn=t(b[0]-a[0]);
   const h=Math.sin(dl/2)**2+Math.cos(t(a[1]))*Math.cos(t(b[1]))*Math.sin(dn/2)**2; return 2*R*Math.asin(Math.sqrt(h)); }
 const walkMin = m => m==null?null:Math.max(1,Math.round(m*1.3/67));   // 직선거리 → 도보 분(어림)
-async function loadHome(){
-  if(!HOMES) HOMES=await getJSON(BASE+'homes.json');
-  await loadSubway();
+async function loadCond(){
   if(COND===null){
     try{ CDB=await SheetDB.use(); CKEY=!!CDB&&canSave(); const s=CDB?await CDB.doc('notes/home-conditions').get():null; COND=(s&&s.exists)?(s.data()||{}):{}; }
     catch(e){ COND={}; }
   }
+  return COND;
 }
-function saveCond(){ if(!CKEY) return;   // 열쇠 없는 기기 — 화면에서만 쓴다
+async function loadHome(){
+  if(!HOMES) HOMES=await getJSON(BASE+'homes.json');
+  await loadSubway();
+  await loadCond();
+}
+function saveCond(okText){ if(!CKEY) return;   // 열쇠 없는 기기 — 화면에서만 쓴다
   const el=document.getElementById('csaved'); if(el) el.textContent='저장 중…';
   clearTimeout(csave); csave=setTimeout(async()=>{ const e2=document.getElementById('csaved');
-    try{ if(!CDB) throw new Error('시트 연결 안 됨'); await CDB.doc('notes/home-conditions').set(COND); if(e2) e2.textContent='✓ 조건 저장됨(우리 구글 시트)'; }
+    try{ if(!CDB) throw new Error('시트 연결 안 됨'); await CDB.doc('notes/home-conditions').set(COND); if(e2) e2.textContent=okText||'✓ 조건 저장됨(우리 구글 시트)'; }
     catch(e){ if(e2) e2.textContent='저장 못 했어요 — '+e.message; } }, 700); }
 // 🕒 출퇴근(지하철만, 어림 — 11/2) — 공개 파일 subway.json 엔 역·역 사이 분만 있고, 근무지 좌표는 시트에서 읽어 폰에서만 계산한다.
 //  걸어서 역까지(직선×1.3, 분당 67m) + 처음 기다림 3분 + 역 사이(오픈스트리트맵 노선 순서, 거리로 어림 — market_subway.py) + 갈아타기 5분(GTX 8분) + 내려서 걸어서.
@@ -618,6 +627,8 @@ async function renderHome(app){
       ${CTOK?`<label>출퇴근(지하철)<select data-c="commute">${opt(c.commute||'',[[30,'30분 안'],[40,'40분 안'],[50,'50분 안'],[60,'60분 안'],[75,'75분 안'],['','상관없음']])}</select></label>`:''}
       <label>1년 거래<select data-c="minN">${opt(c.minN||0,[[0,'상관없음'],[3,'3건 이상'],[6,'6건 이상'],[12,'12건 이상']])}</select></label>
     </div><div class="saved" id="csaved">${CKEY?'':'🔑 이 기기엔 두 번째 열쇠가 없어요<br>바꾼 조건은 이 화면에서만 쓰고 저장 안 돼요'}</div></div>
+    ${(c.watch&&c.watch.length)?`<div class="lab">⭐ 관심 단지 ${c.watch.length}곳 · 새 실거래가 신고되면 개인 채팅으로</div><div class="card">${c.watch.map(w=>{ const u=String(w.k||'').split('|')[1]||'';
+      return `<div class="row" data-wk="${esc(w.k)}"><div class="a"><div class="n">⭐ ${esc(w.n||'')}</div><div class="m">${nw(esc((w.g?w.g+' ':'')+u))}</div></div><div class="b"><div class="m">${nw('단지 보기 →')}</div></div></div>`; }).join('')}</div>`:''}
     <div class="lab">후보 ${rows.length.toLocaleString()}곳 · ${esc(P0.name)}</div>
     <div class="chips">${[['dist','가까운 순'],['cheap','싼 순'],['deal','거래 많은 순'],['new','새 아파트 순'],['drop','최고가보다 많이 내린 순'],...(CTOK?[['time','출퇴근 빠른 순']]:[])].map(([k,t])=>`<button class="chip ${(c.sort||'dist')===k?'on':''}" data-sort="${k}">${t}</button>`).join('')}</div>
     <div class="card">${show.map(x=>{ const r=x.r, b=x.b, dr=b[0]/b[2]-1;
@@ -637,6 +648,7 @@ async function renderHome(app){
   const mb=app.querySelector('#more'); if(mb) mb.onclick=()=>{ st.all=true; render(); };
   setLbl(`🏠 내 집 후보 <span>${rows.length.toLocaleString()}곳 · ${esc(P0.name)}</span>`); homeMap(rows, P0);
   app.querySelectorAll('[data-h]').forEach(r=>r.onclick=()=>{ const [sgg,u,j,bd]=r.dataset.h.split('|'); go({v:null, r:sgg, d:u, x:j, a:bd}); });
+  app.querySelectorAll('[data-wk]').forEach(r=>r.onclick=()=>{ const [sgg,u,j]=r.dataset.wk.split('|'); go({v:null, r:sgg, d:u, x:j, a:null}); });
 }
 
 // ── 🗺 지도 + 목록 시트(11/3 사장님 '경매 페이지처럼') ─────────────────────────────
@@ -756,6 +768,9 @@ function homeMap(rows, plan){
       const near=pins.some(q=>km([q.lng,q.lat],[p.lng,p.lat])<3); pins.push(p);   // 기흥·화성처럼 가까우면 이름표를 점 아래로
       L.circle([p.lat,p.lng],{radius:(plan.km||10)*1000, color:'#191f28', weight:1.2, dashArray:'5 5', fill:false, interactive:false}).addTo(lay);
       L.marker([p.lat,p.lng],{icon:L.divIcon({className:'', html:`<span class="hpin">🏢 ${esc(p.n)}</span>`, iconSize:null, iconAnchor:near?[14,-8]:[14,12]}), zIndexOffset:1000}).addTo(lay); }
+    for(const w of ((COND&&COND.watch)||[])){ const r=HOMES.rows.find(x=>x[0]+'|'+x[1]+'|'+x[2]===w.k); if(!r) continue;
+      L.marker([r[5],r[4]],{icon:L.divIcon({className:'', html:'<span class="wpin">⭐</span>', iconSize:null, iconAnchor:[9,10]}), zIndexOffset:900})
+        .bindPopup(`<div class="hpop"><b>⭐ ${esc(w.n||r[3])}</b><br>${esc(r[1])}${r[6]?' · '+r[6]+'년':''}<br><a href="#" class="go" data-go="${r[0]}|${esc(r[1])}|${esc(r[2])}|">단지 보기 →</a></div>`).addTo(lay); }
     return pts; },
     cs.length?`<i style="background:${COL[0]}"></i>싼 편(${eok(q1)} 이하)<i style="background:${COL[1]}"></i>중간<i style="background:${COL[2]}"></i>비싼 편<br>🏢 근무지 · 점선 ${plan.km||10}km · 단지 ${cs.length.toLocaleString()}곳`:'조건에 맞는 단지가 없어요');
 }
@@ -935,7 +950,7 @@ async function renderComplex(app){
   const P=((await pts(st.r, D.apt.cf[c.umd]))[c.jibun]||{})[String(b.a)]||{p:[],r:[]};
   app.innerHTML=`<div class="nav"><button class="back" id="bk">← ${esc(st.d)}</button><button class="home" id="hm">📈 처음</button></div>
     <div class="head"><h1>${esc(c.name)}</h1><div class="sub">${esc(g.n+' '+c.umd+' '+c.jibun)}${c.built?' · '+c.built+'년':''}</div>
-      <span class="nv" data-u="https://m.land.naver.com/search/result/${encodeURIComponent(g.n+' '+c.umd+' '+c.name)}">네이버 매물 →</span><span class="nv" data-u="https://map.naver.com/p/search/${encodeURIComponent(g.n+' '+c.umd+' '+c.name)}">🗺 지도 →</span></div>
+      <span class="nv" data-u="https://m.land.naver.com/search/result/${encodeURIComponent(g.n+' '+c.umd+' '+c.name)}">네이버 매물 →</span><span class="nv" data-u="https://map.naver.com/p/search/${encodeURIComponent(g.n+' '+c.umd+' '+c.name)}">🗺 지도 →</span><span class="wst" id="wst">☆ 관심</span><div class="wmsg" id="csaved"></div></div>
     <div class="tabs2">${bands.map(x=>`<button class="chip ${x===b?'on':''}" data-a="${x.a}">${x.a}㎡ · ${x.n}건</button>`).join('')}</div>
     <div class="tiles two">
       <div class="tile"><div class="k">최근 거래</div><div class="v">${man(b.last[0])}</div><div class="s">${dK(b.last[1])}</div></div>
@@ -950,6 +965,15 @@ async function renderComplex(app){
       <div class="askrow"><input id="askv" inputmode="decimal" placeholder="예: 9.5 (억)"><select id="askfl"><option value="">층 모름</option><option value="low">1~3층</option><option value="high">4층 이상</option></select><button class="askgo" id="askgo">판단</button></div>
       <div id="askout" class="askout"></div><div id="asklist"></div></div>`;
   app.querySelector('#bk').onclick=()=>go({x:null,a:null}); app.querySelector('#hm').onclick=()=>go({r:null,d:null,x:null,a:null});
+  // ⭐ 관심 단지(11/3) — 시트 '내 집 조건' 문서의 watch 에 넣고 뺀다(개인 값 — 두 번째 열쇠). 새 실거래는 매일 09:30 개인 채팅으로
+  { const el=app.querySelector('#wst'), k=`${st.r}|${c.umd}|${c.jibun}`;
+    const paint=()=>{ const on=((COND&&COND.watch)||[]).some(w=>w.k===k); el.textContent=on?'★ 관심 단지':'☆ 관심'; el.classList.toggle('on',on); };
+    loadCond().then(paint);
+    el.onclick=async()=>{ await loadCond(); const msg=app.querySelector('#csaved');
+      if(!CKEY){ msg.innerHTML='🔑 이 기기엔 두 번째 열쇠가 없어 관심 단지를 저장 못 해요<br>사장님 열쇠 링크를 이 기기에서 한 번 열어 주세요'; return; }
+      const w=(COND.watch=COND.watch||[]), i=w.findIndex(x=>x.k===k);
+      if(i>=0) w.splice(i,1); else w.push({k, n:c.name, g:g.n, at:new Date().toISOString().slice(0,19)});
+      paint(); saveCond(i>=0?'관심 단지에서 뺐어요':'⭐ 관심 단지에 넣었어요 — 새 실거래가 신고되면 개인 채팅으로 알려 드려요'); }; }
   app.querySelectorAll('[data-a]').forEach(x=>x.onclick=()=>go({a:x.dataset.a}));
   { const key=`${st.r}|${c.umd}|${c.jibun}|${b.a}`, out=app.querySelector('#askout'), lst=app.querySelector('#asklist');
     const bindDel=()=>lst.querySelectorAll('[data-del]').forEach(x=>x.onclick=async()=>{ lst.innerHTML=askListHtml(await askRemove(key, x.dataset.del)); bindDel(); });
