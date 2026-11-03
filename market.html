@@ -123,6 +123,8 @@ button{font:inherit;color:inherit}
 .mmap,.sheet-handle{display:none}
 body.mapmode .mmap{display:block;background:#e8ecef}
 body.mapmode .mmap.leaflet-container{font-family:inherit}
+/* 바탕 지도는 옅은 회색(11/3 사장님 — 경매 사이트 지도처럼 차분하게). 한강만 살짝 푸르게 남고, 색 점은 위 칸이라 그대로 */
+body.mapmode .mmap .leaflet-tile-pane{filter:grayscale(.85) brightness(1.08) contrast(.88)}
 .mleg{background:rgba(255,255,255,.95);border-radius:10px;padding:6px 10px;font-size:11.5px;color:var(--t2);box-shadow:0 1px 4px rgba(0,0,0,.18);line-height:1.7;word-break:keep-all}
 .mleg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin:0 4px 0 7px;vertical-align:-1px}
 .mleg i:first-of-type{margin-left:0}
