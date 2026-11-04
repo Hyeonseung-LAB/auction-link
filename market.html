@@ -129,6 +129,10 @@ button{font:inherit;color:inherit}
 .arow{padding:9px 0;border-top:1px solid var(--line);font-size:13.5px;line-height:1.55}
 .auc h3+.arow{border-top:0}
 .auc .cap{font-size:12px;color:var(--t3);margin-top:6px;line-height:1.5}
+.arow .rk{font-size:12.5px;color:#b45309;font-weight:700}
+.aust{border-top:1px solid var(--line);margin-top:6px;padding-top:9px;font-size:13.5px;line-height:1.6;word-break:keep-all}
+.aust .k{font-weight:800;margin-bottom:2px}
+.aust .m{font-size:12.5px;color:var(--t2)}
 .arow .m{font-size:12.5px;color:var(--t2)}
 .nv.ak{border-color:#e2a400;color:#a87e00}
 .apin{font-size:15px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))}
@@ -779,6 +783,7 @@ const HELP=[
     '단지 화면: 평형별 실거래 점, 🔥 = 그때까지 최고가예요.',
     '💬 이 값이면 급매일까? = 본 호가를 넣으면 최근 3개월 같은 평형·층대 거래와 견줘요.',
     '네이버 매물 → · 🗺 지도 → = 네이버로 바로 가요.',
+    '🔨 지금 경매 중 = 이 단지 경매 물건이에요. 📊 지난 낙찰이 시세보다 얼마나 쌌는지도 함께 봐요.',
     '☆ 관심 = 누르면 그 단지 새 실거래를 매일 09:30 개인 채팅으로 보내요.']],
   ['🏠 내 집 후보',['조건(예산·근무지 등)은 구글 시트에만 있어요.',
     '두 번째 열쇠가 있는 기기에서만 보이고 저장돼요.',
@@ -1163,14 +1168,25 @@ function askListHtml(list){ if(!list||!list.length) return '';
   return '<div class="lab" style="margin-top:12px">넣어 본 값</div>'+list.map(x=>`<div class="row" style="cursor:default"><div class="a"><div class="n">${nw(man(x.v))}${x.fl?' · '+(x.fl==='low'?'1~3층':'4층 이상'):''}</div><div class="m">${nw(esc(x.at.slice(0,10)))} · ${esc(x.verdict||'')}</div></div><div class="b">${canSave()?`<button class="home" data-del="${esc(x.at)}">✕</button>`:''}</div></div>`).join(''); }
 
 // 🔨 지금 경매 중(11/3) — 경매 사이트 목록(매일 아침)에서 이 단지와 구·동·지번이 같은 물건. 최저가를 최근 실거래 기준(💬 와 같은 셈)과 견줌
-function aucCard(AU, PA){ if(!AU.length) return '';
+// 📊 지난 낙찰이 시세보다 얼마나 쌌나(11/4) — market_auction.sale_stats. 지역 낙찰이 적으면 수도권 전체. 숫자 근거는 인계 8장
+function aucStat(sd){ const S=AUC&&AUC.st; if(!S||!S.all) return '';
+  const a=(S.sido||{})[sd], m=a||S.all, base=(S.base_s||{})[a?sd:'']??S.base, P=x=>pct(x,1);
+  return `<div class="aust"><div class="k">📊 지난 낙찰은 시세보다 얼마나 쌌나</div>`
+    +`<div>${nw((a?sd:'수도권')+' '+m.n.toLocaleString()+'건')} · ${nw('중위 ')}${nw('<b>'+P(m.m)+'</b>')}</div>`
+    +`<div class="m">${nw('가운데 절반 '+P(m.q1)+' ~ '+P(m.q3))}</div>`
+    +(base!=null?`<div class="m">${nw('평범한 매매는 같은 기준으로 '+P(base))}</div>`:'')
+    +((S.bid||[]).length?`<div class="m">응찰자 ${S.bid.map(b=>nw(b.k+' '+P(b.m))).join(' · ')}</div>`:'')
+    +`<div class="cap">· 시세 = 입찰 전 6개월, 같은 단지·크기·층 묶음 실거래 중위<br>· 최근 1년 낙찰만 셌어요<br>· 대항력·선순위·지분 같은 권리 위험은 뺐어요<br>· 이긴 사람의 값이에요<br>· 내부 상태·명도 위험은 숫자에 없어요<br>· 응찰자 수는 입찰 전에 알 수 없어요</div></div>`; }
+function aucCard(AU, PA, sd){ if(!AU.length) return '';
   return `<div class="card auc"><h3>🔨 지금 경매 중 ${AU.length}건</h3>`+AU.map(x=>{
     const bd=String(Math.floor(parseFloat(x.ar)||0)), pp=((PA[bd]||{}).p)||[], j=pp.length?judgeAsk(pp, Math.round(x.b/1e4), ''):null;
     const rt=j&&j.refN>=3&&j.ref?Math.round(x.b/1e4/j.ref*100):null;
     return `<div class="arow"><div><b>${nw(sdK(x.s)+' 입찰')}</b> · ${nw('최저 '+man(x.b/1e4))}${x.f?' '+nw('(유찰 '+x.f+'회)'):''}</div>`
       +`<div class="m">${nw('감정 '+man(x.a/1e4))} · ${nw(esc(x.ar))}</div>`
       +(rt?`<div class="m">${nw('최저가 = '+j.refWhat+' 실거래 중위 '+man(j.ref)+'의 '+rt+'%')}</div>`:'')
+      +(x.r?`<div class="rk">⚠ ${esc(x.r)}<br>물어줄 돈이 따로 있을 수 있어요<br>아래 통계는 이런 물건을 뺀 값이에요</div>`:'')
       +(x.u?`<span class="nv ak" data-u="${esc(x.u)}">경매 보기 →</span>`:'')+`</div>`; }).join('')
+    +aucStat(sd)
     +`<div class="cap">경매 사이트 목록(매일 아침)에서 이 단지와 동·지번이 같은 물건이에요.</div></div>`; }
 async function renderComplex(app){
   noMap();
@@ -1184,7 +1200,7 @@ async function renderComplex(app){
   app.innerHTML=`<div class="nav"><button class="back" id="bk">← ${esc(st.d)}</button><button class="home" id="hm">📈 처음</button></div>
     <div class="head"><h1>${esc(c.name)}</h1><div class="sub">${esc(g.n+' '+c.umd+' '+c.jibun)}${c.built?' · '+c.built+'년':''}</div>
       <span class="nv" data-u="https://m.land.naver.com/search/result/${encodeURIComponent(g.n+' '+c.umd+' '+c.name)}">네이버 매물 →</span><span class="nv" data-u="https://map.naver.com/p/search/${encodeURIComponent(g.n+' '+c.umd+' '+c.name)}">🗺 지도 →</span><span class="wst" id="wst">☆ 관심</span><div class="wmsg" id="csaved"></div></div>
-    ${aucCard(AU, PA)}
+    ${aucCard(AU, PA, g.s)}
     <div class="tabs2">${bands.map(x=>`<button class="chip ${x===b?'on':''}" data-a="${x.a}">${x.a}㎡ · ${x.n}건</button>`).join('')}</div>
     <div class="tiles two">
       <div class="tile"><div class="k">최근 거래</div><div class="v">${man(b.last[0])}</div><div class="s">${dK(b.last[1])}</div></div>
