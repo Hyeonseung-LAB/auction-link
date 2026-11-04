@@ -91,7 +91,7 @@ button{font:inherit;color:inherit}
 .hmap.leaflet-container{font-family:inherit}
 .hpop{font-size:13px;line-height:1.5;min-width:180px;word-break:keep-all}
 .hpop b{font-size:14px}
-.hpop .go{display:inline-block;margin-top:6px;font-weight:800;color:var(--s1)}
+.hpop .go{display:inline-block;margin-top:2px;padding:7px 0;font-weight:800;color:var(--s1)}
 /* 📊 흐름 비교(11/2) */
 .cchips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 2px}
 .cml{margin-top:6px}
@@ -112,7 +112,7 @@ button{font:inherit;color:inherit}
 .saved{font-size:12px;color:var(--t3);margin-top:8px;min-height:1em}
 .nv+.nv{margin-left:6px}
 /* ⭐ 관심 단지(11/3) — 단지 화면 단추 · 지도 별 */
-.wst{display:inline-block;margin:8px 0 0 6px;padding:3px 10px;border-radius:999px;border:1.5px solid #e2b007;color:#a87e00;background:#fff;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap}
+.wst{display:inline-block;margin:8px 0 0 6px;padding:7px 12px;border-radius:999px;border:1.5px solid #e2b007;color:#a87e00;background:#fff;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap}
 .wst.on{background:#fff4c7}
 .wmsg{font-size:12px;color:var(--t2);margin-top:6px;line-height:1.5}
 .wpin{font-size:17px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
@@ -147,7 +147,7 @@ button{font:inherit;color:inherit}
 .hbox h4{font-size:14.5px;margin:14px 0 4px;color:var(--t1)}
 .hbox ul{margin:0;padding-left:18px}
 .hbox li{font-size:13.5px;line-height:1.6;color:var(--t2);margin:2px 0;word-break:keep-all}
-.nv{display:inline-block;margin-top:8px;padding:3px 10px;border-radius:999px;border:1.5px solid #03c75a;color:#03c75a;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap}
+.nv{display:inline-block;margin-top:8px;padding:7px 12px;border-radius:999px;border:1.5px solid #03c75a;color:#03c75a;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap}
 .askrow{display:flex;gap:6px;margin-top:10px}
 .askrow input{flex:1;min-width:0;font:inherit;font-size:15px;font-weight:700;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px}
 .askrow select{font:inherit;font-size:13px;font-weight:700;border:1.5px solid var(--line);border-radius:10px;padding:8px 4px;background:#fff}
@@ -200,8 +200,10 @@ let REBN, REB;                         // 📈 부동산원 주간(11/4): reb_no
 async function rebFull(){ if(REB===undefined){ try{ REB=await getJSON(BASE+'reb.json'); }catch(e){ REB=null; } } return REB; }
 // 주간 변화는 0.0x% 라 소수 둘째 자리까지(pct 는 0.05% 아래를 0으로 접는다)
 const wp = x => x==null ? '<span class="muted">–</span>' : `<span class="${Math.abs(x)<0.00005?'flat':x>0?'up':'down'} nw">${Math.abs(x*100)<0.005?'0.00%':(x>0?'+':'△')+Math.abs(x*100).toFixed(2)+'%'}</span>`;
-const aucOf = k => (AUC&&AUC.items&&AUC.items[k])||[];
-const aucIn = code => { if(!AUC||!AUC.items) return 0; let n=0; for(const k in AUC.items) if(k.startsWith(code+'|')) n+=AUC.items[k].length; return n; };
+// 파일은 하루 한 번(09:30) 만든다 — 그 사이 입찰일이 지난 건은 화면에서 뺀다(11/4 QA)
+const aucToday = () => { const d=new Date(); return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); };
+const aucOf = k => { const t=aucToday(); return ((AUC&&AUC.items&&AUC.items[k])||[]).filter(x=>String(x.s)>=t); };
+const aucIn = code => { if(!AUC||!AUC.items) return 0; let n=0; for(const k in AUC.items) if(k.startsWith(code+'|')) n+=aucOf(k).length; return n; };
 const sdK = s => s&&s.length===8 ? (+s.slice(4,6))+'/'+(+s.slice(6,8)) : '';
 // 지도 창 — 그 단지 경매들(입찰 빠른 순) + 단지 보기 · 경매 보기
 function aucPop(r, au){ return `<div class="hpop"><b>🔨 ${esc(r[3])}</b><br>`
@@ -657,7 +659,7 @@ function weekRegion(code){
 
 // ── 🏠 내 집 후보(11/2 3단계) ────────────────────────────────
 // 조건(예산·근무지·거리…)은 구글 시트 notes/home-conditions 에만. 공개 파일(homes.json)엔 시장 숫자만 있다.
-let HOMES=null, COND=null, CDB=null, csave=null, CKEY=false;
+let HOMES=null, COND=null, CDB=null, csave=null, CKEY=false, CBASE=null, cq=Promise.resolve();
 // 🔑 두 번째 열쇠(11/2) — 조건은 개인 값이라 열쇠 있는 기기만 읽힌다. 열쇠 없는 기기는 시트에 안 쓴다(못 읽은 걸 빈 값으로 덮어쓰지 않게)
 const canSave=()=>{ const S=window.SheetDB; return !!S&&(S.MOCK||(typeof S.hasKey==='function'?S.hasKey():true)); };   // 옛 sheetdb.js(열쇠 없던 판)면 예전처럼
 const HB={59:9, 84:10};                       // homes.json 줄에서 평형대 칸 위치
@@ -668,6 +670,7 @@ async function loadCond(){
   if(COND===null){
     try{ CDB=await SheetDB.use(); CKEY=!!CDB&&canSave(); const s=CDB?await CDB.doc('notes/home-conditions').get():null; COND=(s&&s.exists)?(s.data()||{}):{}; }
     catch(e){ COND={}; }
+    CBASE=JSON.parse(JSON.stringify(COND));
   }
   return COND;
 }
@@ -676,11 +679,37 @@ async function loadHome(){
   await loadSubway();
   await loadCond();
 }
+// 저장 = 직전에 시트를 다시 읽고 이 기기가 바꾼 칸만 얹기(11/4 QA) — 폰·PC·노트북이 옛 값으로 서로 덮어쓰지 않게.
+// 다시 읽기가 실패했거나 열쇠 읽기가 막혀 공개 보기로 넘어갔으면(개인 문서가 안 보임) 저장하지 않는다 — 빈 값으로 덮으면 조건이 통째로 지워진다.
+async function freshRead(db){ const ok=await db.refresh(); if(SheetDB.MOCK) return;
+  if(!ok||!(await db.doc('notes/home-conditions').get()).exists) throw new Error('시트에서 개인 값을 못 읽었어요. 잠시 뒤 다시 해 주세요'); }
+const sameV=(a,b)=>JSON.stringify(a===undefined?null:a)===JSON.stringify(b===undefined?null:b);
+function mergeCond(base, mine, now){ const out=Object.assign({}, now);
+  for(const k of new Set([...Object.keys(base),...Object.keys(mine)])){
+    if(sameV(mine[k],base[k])) continue;                // 이 기기가 안 바꾼 칸 — 시트 값 그대로
+    if(k==='watch'){                                    // ⭐ 는 단지별로 — 내가 뺀 것만 빼고 내가 넣은 것만 더한다
+      const ks=a=>new Set((a||[]).map(w=>w.k)), b=ks(base.watch), m=ks(mine.watch);
+      const kept=(now.watch||[]).filter(w=>!(b.has(w.k)&&!m.has(w.k))), have=ks(kept);
+      (mine.watch||[]).forEach(w=>{ if(!b.has(w.k)&&!have.has(w.k)) kept.push(w); });
+      out.watch=kept; }
+    else if(mine[k]===undefined) delete out[k];
+    else out[k]=mine[k]; }
+  return out; }
 function saveCond(okText){ if(!CKEY) return;   // 열쇠 없는 기기 — 화면에서만 쓴다
   const el=document.getElementById('csaved'); if(el) el.textContent='저장 중…';
-  clearTimeout(csave); csave=setTimeout(async()=>{ const e2=document.getElementById('csaved');
-    try{ if(!CDB) throw new Error('시트 연결 안 됨'); await CDB.doc('notes/home-conditions').set(COND); if(e2) e2.textContent=okText||'✓ 조건 저장됨(우리 구글 시트)'; }
-    catch(e){ if(e2) e2.textContent='저장 못 했어요 — '+e.message; } }, 700); }
+  clearTimeout(csave); csave=setTimeout(()=>{ cq=cq.then(()=>pushCond(okText)); }, 700); }   // 한 번에 하나씩(겹치면 다시 읽은 값이 앞선 저장을 놓친다)
+async function pushCond(okText){ let now=null, msg=okText||'✓ 조건 저장됨(우리 구글 시트)';
+  try{ if(!CDB) throw new Error('시트 연결 안 됨');
+    const doc=CDB.doc('notes/home-conditions');
+    await freshRead(CDB); const s=await doc.get(); now=(s.exists&&s.data())||{};
+    const out=mergeCond(CBASE, COND, now), sent=JSON.stringify(out);
+    let other=false;                                    // 다른 기기가 바꾼 값이 섞였으면 화면도 다시 그린다(안 바뀐 칸은 객체를 그대로 둔다 — 화면이 잡고 있다)
+    for(const k of new Set([...Object.keys(COND),...Object.keys(out)])) if(!sameV(COND[k],out[k])){ if(k in out) COND[k]=out[k]; else delete COND[k]; other=true; }
+    if(!sameV(now,out)) await doc.set(JSON.parse(sent));
+    CBASE=JSON.parse(sent);
+    if(other) await render();
+  }catch(e){ if(now) CBASE=now; msg='저장 못 했어요 — '+e.message; }   // 못 보냈으면 시트는 아직 now — 다음 저장 때 내 변경을 다시 얹는다
+  const e2=document.getElementById('csaved'); if(e2) e2.textContent=msg; }
 // 🕒 출퇴근(지하철만, 어림 — 11/2) — 공개 파일 subway.json 엔 역·역 사이 분만 있고, 근무지 좌표는 시트에서 읽어 폰에서만 계산한다.
 //  걸어서 역까지(직선×1.3, 분당 67m) + 처음 기다림 3분 + 역 사이(오픈스트리트맵 노선 순서, 거리로 어림 — market_subway.py) + 갈아타기 5분(GTX 8분) + 내려서 걸어서.
 //  근무지·단지에서 1.2km 안 역만 쓴다(더 멀면 버스·차라 안 셈). 근무지가 1.5km 안이면 걸어서만.
@@ -853,6 +882,8 @@ async function mapView(scope, draw, leg){
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18, attribution:'© OpenStreetMap'}).addTo(MAP);
     MAP.setView([37.45,127.0],9);
     const lg=L.control({position:'bottomleft'}); lg.onAdd=()=>L.DomUtil.create('div','mleg'); lg.addTo(MAP);
+    const legVis=v=>()=>{ const le=document.querySelector('.mleg'); if(le) le.style.visibility=v; };   // 범례가 창 아래쪽 단추를 가리지 않게(11/4 QA)
+    MAP.on('popupopen', legVis('hidden')); MAP.on('popupclose', legVis(''));
     document.getElementById('mmap').addEventListener('click', popClick, true);   // 창 단추 — 잡기 단계에서(창이 다시 그려져도 늘 먹게)
     window.__mmap=MAP;                                                      // 시험용
     MAP.on('zoomend', scaleR);
@@ -1120,10 +1151,12 @@ async function askDB(){ if(ADB===null){ try{ ADB=(CDB||await SheetDB.use())||fal
 async function askLoad(){ const db=await askDB(); if(!db) return {}; try{ const s=await db.doc('notes/asks').get(); return (s.exists&&s.data())||{}; }catch(e){ return {}; } }
 async function askSave(key, rec){ const db=await askDB(); if(!db) throw new Error('시트 연결 안 됨');
   if(!canSave()) throw Object.assign(new Error('열쇠 없음'), {code:'nokey'});
+  await freshRead(db);
   const all=await askLoad(); const list=(all[key]||[]).filter(x=>x.at!==rec.at); list.unshift(rec); all[key]=list.slice(0,10);
   await db.doc('notes/asks').set(all); return all[key]; }
 async function askRemove(key, at){ const db=await askDB(); if(!db) return [];
   if(!canSave()) return (await askLoad())[key]||[];
+  await freshRead(db);
   const all=await askLoad(); all[key]=(all[key]||[]).filter(x=>x.at!==at); if(!all[key].length) delete all[key];
   await db.doc('notes/asks').set(all); return all[key]||[]; }
 function askListHtml(list){ if(!list||!list.length) return '';
@@ -1177,7 +1210,7 @@ async function renderComplex(app){
       paint(); saveCond(i>=0?'관심 단지에서 뺐어요':'⭐ 관심 단지에 넣었어요 — 새 실거래가 신고되면 개인 채팅으로 알려 드려요'); }; }
   app.querySelectorAll('[data-a]').forEach(x=>x.onclick=()=>go({a:x.dataset.a}));
   { const key=`${st.r}|${c.umd}|${c.jibun}|${b.a}`, out=app.querySelector('#askout'), lst=app.querySelector('#asklist');
-    const bindDel=()=>lst.querySelectorAll('[data-del]').forEach(x=>x.onclick=async()=>{ lst.innerHTML=askListHtml(await askRemove(key, x.dataset.del)); bindDel(); });
+    const bindDel=()=>lst.querySelectorAll('[data-del]').forEach(x=>x.onclick=async()=>{ try{ lst.innerHTML=askListHtml(await askRemove(key, x.dataset.del)); bindDel(); }catch(e){ out.innerHTML='<div class="muted">시트에서 못 지웠어요('+esc(e.message)+')</div>'; } });
     askLoad().then(all=>{ lst.innerHTML=askListHtml(all[key]); bindDel(); });
     app.querySelector('#askgo').onclick=async()=>{ const v=parseAsk(app.querySelector('#askv').value), fl=app.querySelector('#askfl').value;
       if(!v){ out.innerHTML='<div class="muted">값을 숫자로 넣어 주세요(예: 9.5 = 9억 5천, 95000 = 만원).</div>'; return; }
