@@ -701,6 +701,8 @@ function winP(q,x){
       try{ if(db){ const s=await db.doc('notes/calc-defaults').get(); if(s.exists) def=s.data()||{}; } }catch(e){}
       const n=k=>Number(Q.get(k))||0;
       state={...BLANK,...def,name:Q.get('name')||'',caseNo:QCASE,appraisal:n('appraisal'),minPrice:n('min'),bid:n('bid')||n('min'),area:n('area'),sellPrice:n('sell'),...qDist()};
+      // 떠안는 보증금(빌라 카드 tk=) → '기타' 칸에 더한다 — 카드 💰 세후와 같아지게(11/4)
+      if(n('tk')) state.other=(Number(state.other)||0)+n('tk');
       currentId=null; dirty=true; touched=true; writeInputs(); render(); renderDeals(); saveDraft();
       toast(n('sell')?'빌라 카드 값으로 채웠어요 · 예상 매도가 = 추정 실거래가':'빌라 카드 값으로 채웠어요 · 예상 매도가를 넣어 주세요');
     }
