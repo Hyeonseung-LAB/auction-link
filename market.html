@@ -116,6 +116,13 @@ button{font:inherit;color:inherit}
 .wst.on{background:#fff4c7}
 .wmsg{font-size:12px;color:var(--t2);margin-top:6px;line-height:1.5}
 .wpin{font-size:17px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+/* 📈 부동산원 주간(11/4) */
+.rebt{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+.rebt th,.rebt td{padding:6px 2px;text-align:right;white-space:nowrap}
+.rebt thead th{font-size:11.5px;color:var(--t3);font-weight:700}
+.rebt tbody th{text-align:left;font-weight:800;color:var(--t1)}
+.rebt tbody tr{border-top:1px solid var(--line)}
+.rsig{font-size:12.5px;font-weight:700;color:var(--t2);margin-top:2px}
 /* 🔨 지금 경매 중(11/3) */
 .auc{border:1.5px solid #f2c94c}
 .auc h3{font-size:15px;margin:0 0 2px;font-weight:800}
@@ -189,6 +196,10 @@ const BASE = 'market/';
 let SUM = null;                       // summary.json
 let WEEK;                              // week.json(📰 이번 주 신고분) — 없으면 null
 let AUC;                               // auction.json(🔨 지금 경매 중, 매일 09:30) — 없으면 null
+let REBN, REB;                         // 📈 부동산원 주간(11/4): reb_now.json(첫 화면, 작음) · reb.json(차트 — 필요할 때만 받음, 320KB)
+async function rebFull(){ if(REB===undefined){ try{ REB=await getJSON(BASE+'reb.json'); }catch(e){ REB=null; } } return REB; }
+// 주간 변화는 0.0x% 라 소수 둘째 자리까지(pct 는 0.05% 아래를 0으로 접는다)
+const wp = x => x==null ? '<span class="muted">–</span>' : `<span class="${Math.abs(x)<0.00005?'flat':x>0?'up':'down'} nw">${Math.abs(x*100)<0.005?'0.00%':(x>0?'+':'△')+Math.abs(x*100).toFixed(2)+'%'}</span>`;
 const aucOf = k => (AUC&&AUC.items&&AUC.items[k])||[];
 const aucIn = code => { if(!AUC||!AUC.items) return 0; let n=0; for(const k in AUC.items) if(k.startsWith(code+'|')) n+=AUC.items[k].length; return n; };
 const sdK = s => s&&s.length===8 ? (+s.slice(4,6))+'/'+(+s.slice(6,8)) : '';
@@ -202,7 +213,7 @@ const aucMark = (L, lay, r, au) => L.marker([r[5],r[4]],{icon:L.divIcon({classNa
 const DET = {};                       // 구코드 → 상세 json
 const st = {k:'apt', f:'전체', o:'c3', r:null, d:null, x:null, a:null, all:false, cmp:[], cw:'', cm:''};
 const KIND = {apt:'아파트', rh:'빌라'};
-const SORTS = [['c3','3개월'],['c12','12개월'],['peak','전고점 대비'],['vol','거래 증감'],['hi','🔥 신고가 비율'],['jr','전세가율'],['m2','㎡당 가격']];
+const SORTS = [['c3','3개월'],['c12','12개월'],['peak','전고점 대비'],['vol','거래 증감'],['hi','🔥 신고가 비율'],['w4','📈 주간 4주'],['jr','전세가율'],['m2','㎡당 가격']];
 const lastv = a => { if(!a) return null; for(let i=a.length-1;i>=0;i--) if(a[i]!=null) return a[i]; return null; };
 const INFO = {
   idx: ['같은 단지·같은 평형끼리만 비교한 가격 흐름이에요.',
@@ -230,6 +241,13 @@ const INFO = {
          '⚖️ 오른·내린 = 같은 단지·평형 바로 앞 거래와 비교해요.',
          '직거래는 신고가·오른·내린에서 빼요.',
          '아래 흐름(다 찬 달 기준)과는 세는 법이 달라요.'],
+  reb: ['한국부동산원이 매주 조사해 발표하는 아파트 가격 지수예요(목요일 발표, 그 주 월요일 기준).',
+        '실거래는 신고가 한두 달 늦어서, 더 최근 흐름을 보려고 같이 봐요.',
+        '조사 지수라 실거래와 다를 수 있어요.',
+        '거래가 적을 땐 호가 위주로 산정돼 오차가 커진다는 지적도 있어요.',
+        '매수우위 = 매매수급지수예요. 100보다 크면 사려는 쪽이 많다는 뜻이에요.',
+        '연천·가평·양평은 주간 조사에 없어요.',
+        '화성 4개 구는 2026년 2월, 인천 새 구는 2026년 7월부터 자료가 있어요(새로 생긴 구).'],
   sig: ['가격 = 같은 단지·평형끼리 비교한 흐름이에요.',
         '거래량 = 최근 3개월 매매 건수를 작년 같은 3개월과 견준 증감이에요(0 = 작년과 같음).',
         '🔥 신고가 비율 = 최근 3개월 중개거래 가운데 같은 단지·평형의 그 전 최고가(2021년 이후)를 넘은 비율이에요.',
@@ -275,7 +293,7 @@ const defO = k => k==='rh' ? 'c12' : 'c3';   // 빌라는 6개월 묶음이라 �
 function readHash(){ const p=new URLSearchParams(location.hash.slice(1));
   st.k = p.get('k')==='rh' ? 'rh' : 'apt'; st.f = p.get('f')||'전체'; st.o = p.get('o')||defO(st.k);
   st.r = p.get('r'); st.d = p.get('d'); st.x = p.get('x'); st.a = p.get('a'); st.v = p.get('v');
-  st.cmp=(p.get('cmp')||'').split(',').filter(c=>/^\d{5}$/.test(c)).slice(0,3); st.cw=['3y','1y'].includes(p.get('cw'))?p.get('cw'):''; st.cm=['vol','hi','jr'].includes(p.get('cm'))?p.get('cm'):''; }
+  st.cmp=(p.get('cmp')||'').split(',').filter(c=>/^\d{5}$/.test(c)).slice(0,3); st.cw=['3y','1y'].includes(p.get('cw'))?p.get('cw'):''; st.cm=['vol','hi','jr','rs','rj'].includes(p.get('cm'))?p.get('cm'):''; }
 function go(ch){ if('r' in ch || 'd' in ch){ st.all=false; st.wall=false; } Object.assign(st, ch); const p=new URLSearchParams();
   if(st.k!=='apt') p.set('k',st.k); if(st.f!=='전체') p.set('f',st.f); if(st.o!==defO(st.k)) p.set('o',st.o);
   for(const k of ['v','r','d','x','a']) if(st[k]) p.set(k,st[k]);
@@ -376,7 +394,7 @@ function multiLine(el, xs, series, o={}){
   const xOf=i=>l+(w-l-r)*i/(xs.length-1), yOf=v=>t+(h-t-b)*(1-(v-lo)/(hi-lo));
   const grid=ticks.map(v=>`<line x1="${l}" x2="${w-r}" y1="${yOf(v)}" y2="${yOf(v)}" stroke="var(--grid)"/><text x="${l-6}" y="${yOf(v)+4}" text-anchor="end">${Math.round(v)}${U}</text>`).join('');
   // 1년(13달)은 1월 눈금이 하나뿐이라 석 달마다 'YY.MM'
-  const yt=(xs.length>14?yearTicks(xs,xOf):xs.map((m,i)=>i%3===0?`<text x="${xOf(i)}" y="__B__" text-anchor="${i?'middle':'start'}">${ymS(m)}</text>`:'').join(''))
+  const yt=(o.xt?o.xt.map(([i,tx])=>`<text x="${xOf(i)}" y="__B__" text-anchor="${i?'middle':'start'}">${tx}</text>`).join(''):xs.length>14?yearTicks(xs,xOf):xs.map((m,i)=>i%3===0?`<text x="${xOf(i)}" y="__B__" text-anchor="${i?'middle':'start'}">${ymS(m)}</text>`:'').join(''))
     .replaceAll('__B__',h-6).replaceAll('__T__',t).replaceAll('__B0__',h-b);
   const pathOf=a=>{ let d='', pen=false; a.forEach((v,i)=>{ if(v==null){pen=false;return;} d+=(pen?'L':'M')+xOf(i).toFixed(1)+' '+yOf(v).toFixed(1); pen=true; }); return d; };
   const li=xs.length-1;
@@ -450,9 +468,15 @@ function metricsGrid(m){
   return `<div class="grid3">${cell('3개월', m.ok?pctH(m.c3):'<span class="muted">–</span>')}${cell('12개월', m.ok?pctH(m.c12):'<span class="muted">–</span>')}${cell('전고점 대비', m.ok?pctH(m.peak):'<span class="muted">–</span>', m.ok?peakSub(m):'표본 적음')}</div>
     <div class="grid3">${cell('㎡당', m.m2?nw(man(m.m2)):'–', m2Sub(m))}${cell('전세가율', m.jr!=null?nw(Math.round(m.jr*100)+'%'):'–')}${cell('거래 3개월', nw(v3.toLocaleString()+'건'), vc!=null?`작년보다 <span class="${cls(vc)}">${pct(vc,0)}</span>`:'')}</div>`;
 }
+// 카드엔 없는 숫자로 정렬하면 이름 아래에 그 숫자를 보여 준다
+function sortTag(g){ const m=g[st.k]||{};
+  if(st.o==='hi'&&st.k==='apt'){ const v=lastv(m.hi); return v==null?'':`<div class="rsig">🔥 신고가 비율 ${(v*100).toFixed(1)}%</div>`; }
+  if(st.o==='w4'&&st.k==='apt'){ const r=REBN&&REBN.r&&REBN.r[g.c]; return r?`<div class="rsig">📈 주간 4주 ${wp(r.w4)} · 1주 ${wp(r.w1)}</div>`:'<div class="rsig"><span class="muted">주간 조사에 없는 곳</span></div>'; }
+  return ''; }
 function sortVal(reg){ const m=reg[st.k]; if(!m) return -1e9;
   if(st.o==='vol') return volChg(m) ?? -1e9; if(st.o==='jr') return m.jr ?? -1e9; if(st.o==='m2') return m.m2 ?? -1e9;
   if(st.o==='hi') return lastv(m.hi) ?? -1e9;
+  if(st.o==='w4') return (REBN&&REBN.r&&REBN.r[reg.c]&&REBN.r[reg.c].w4) ?? -1e9;
   return m.ok && m[st.o]!=null ? m[st.o] : -1e9; }
 function controls(withFilter){
   return `<div class="bar"><div class="seg">${Object.entries(KIND).map(([k,n])=>`<button class="${st.k===k?'on':''}" data-k="${k}">${n}</button>`).join('')}</div></div>
@@ -469,7 +493,7 @@ const CW=[['','2021년부터'],['3y','3년'],['1y','1년']];
 const CCOL=['#2a78d6','#eb6834','#16a34a','#8b5cf6','#0f766e','#a16207'];
 function cmpSeries(){
   const out=[];
-  for(const g of (SUM.sido||[])){ const m=g[st.k]; if(m&&(m.ok||st.cm)) out.push({name:g.s+' 전체', m:m.ok?m:null, rawm:m}); }
+  for(const g of (SUM.sido||[])){ const m=g[st.k]; if(m&&(m.ok||st.cm)) out.push({name:g.s+' 전체', m:m.ok?m:null, rawm:m, sid:g.s}); }
   for(const c of st.cmp){ const g=SUM.regions.find(x=>x.c===c); if(!g) continue; const m=g[st.k];
     const dup=SUM.regions.filter(x=>x.n===g.n).length>1;          // 중구·동구·서구는 시도까지
     out.push({name:(dup?g.s+' ':'')+g.n, m:m&&m.ok?m:null, rawm:m, code:c}); }
@@ -479,14 +503,47 @@ function cmpCard(){
   if(!SUM.sido||!SUM.sido.length) return '';
   const used=new Set(st.cmp), full=st.cmp.length>=3;
   const opts=['서울','경기','인천'].map(s=>`<optgroup label="${s}">${SUM.regions.filter(g=>g.s===s&&!used.has(g.c)&&g[st.k]&&g[st.k].ok).map(g=>`<option value="${g.c}">${esc(g.n)}</option>`).join('')}</optgroup>`).join('');
-  return `<div class="card ch" id="cmp"><h3>📊 흐름 비교 ${info(st.cm?'sig':'cmp')}</h3><div class="cap" id="cmpcap"></div>
-    <div class="cchips">${CM.filter(([k])=>k!=='hi'||st.k==='apt').map(([k,t])=>`<button class="chip ${st.cm===k?'on':''}" data-cm="${k}">${t}</button>`).join('')}</div>
+  return `<div class="card ch" id="cmp"><h3>📊 흐름 비교 ${info(st.cm==='rs'||st.cm==='rj'?'reb':st.cm?'sig':'cmp')}</h3><div class="cap" id="cmpcap"></div>
+    <div class="cchips">${CM.filter(([k])=>!['hi','rs','rj'].includes(k)||st.k==='apt').map(([k,t])=>`<button class="chip ${st.cm===k?'on':''}" data-cm="${k}">${t}</button>`).join('')}</div>
     <div class="cchips">${CW.map(([k,t])=>`<button class="chip ${st.cw===k?'on':''}" data-cw="${k}">${t}</button>`).join('')}</div>
     <div id="c-cmp"></div><div class="cml" id="cml"></div>
     <select class="cmpadd" id="cmpadd"${full?' disabled':''}><option value="">${full?'구·시는 3곳까지 더할 수 있어요':'＋ 구·시 더해 보기'}</option>${full?'':opts}</select></div>`;
 }
+// 📈 부동산원 주간(11/4) — 흐름 비교 '주간 매매·주간 전세'. 고른 기간 첫 주 = 100, 값이 늦게 시작한 구(새로 생긴 구)는 그 첫 주 = 100
+const wchg=(a,k)=>{ if(!a) return null; let j=a.length-1; while(j>=0&&a[j]==null) j--; return j>=k&&a[j-k]!=null?a[j]/a[j-k]-1:null; };
+async function drawReb(app,S){ const box=app.querySelector('#c-cmp'); box.innerHTML='<div class="empty">불러오는 중…</div>';
+  const R=await rebFull(); if(!box.isConnected) return;
+  if(!R){ box.innerHTML='<div class="empty">주간 자료를 못 불러왔어요.</div>'; return; }
+  const k=st.cm==='rj'?'j':'s', n=R.wks.length, i0=Math.max(0, st.cw==='1y'?n-53:st.cw==='3y'?n-157:0);
+  S.forEach(x=>{ const d=x.code?(R.r||{})[x.code]:(R.sido||{})[x.sid]; x.full=d?d[k]:null; });
+  const live=S.filter(x=>x.full&&x.full.some(v=>v!=null)), xs=R.wks.slice(i0), dt=R.dates.slice(i0);
+  live.forEach(x=>{ const a=x.full.slice(i0), b0=a.find(v=>v!=null); x.ys=a.map(v=>v==null||!b0?null:v/b0*100); x.st=a.findIndex(v=>v!=null); });
+  app.querySelector('#cmpcap').innerHTML=`부동산원 조사 지수 · ${nw(dK(dt[0])+' 주 = 100')} · ${nw(k==='j'?'전세':'매매')}`;
+  const xt=xs.length<=60?xs.map((m,i)=>i%13===0?[i,dt[i].slice(2,7).replace('-','.')]:null).filter(Boolean):null;   // 1년이면 석 달마다 'YY.MM'
+  multiLine(box, xs, live, {xt, tip:i=>`<b>${dK(dt[i])} 주</b>`+live.filter(x=>x.ys[i]!=null).sort((a,c)=>c.ys[i]-a.ys[i])
+    .map(x=>`<br><span style="color:${x.color}">●</span> ${esc(x.name)} ${x.ys[i].toFixed(1)}`).join('')});
+  app.querySelector('#cml').innerHTML=S.map(x=>{ const on=x.full&&x.full.some(v=>v!=null);
+    return `<div class="cmr"><i style="background:${x.color}"></i><div class="cmb"><div class="nm">${esc(x.name)}</div>
+      <div class="vs">${on?`${nw('지난주 '+wp(wchg(x.full,1)))} · ${nw('4주 '+wp(wchg(x.full,4)))} · ${nw('1년 '+wp(wchg(x.full,52)))}${x.st>0?' '+nw('<span class="muted">('+dK(dt[x.st])+'부터)</span>'):''}`:'<span class="muted">주간 조사에 없는 곳이에요</span>'}</div></div>
+      ${x.code?`<button class="x" data-cx="${x.code}" aria-label="빼기">✕</button>`:''}</div>`; }).join('');
+}
+// 첫 화면 카드 — 서울·경기·인천 이번 주(아파트만)
+function rebCard(){ const N=REBN; if(!N||!N.sido||st.k!=='apt') return '';
+  const row=s=>{ const m=N.sido[s]; return m?`<tr><th>${s}</th><td>${wp(m.w1)}</td><td>${wp(m.w4)}</td><td>${wp(m.j1)}</td><td>${m.ss!=null?nw(m.ss.toFixed(0)):'–'}</td></tr>`:''; };
+  return `<div class="card ch"><h3>📈 부동산원 주간 ${info('reb')}</h3><div class="cap">${nw(dK(N.wk)+' 기준')} · ${nw('매주 목요일 발표')}</div>
+    <table class="rebt"><thead><tr><th></th><th>매매 1주</th><th>매매 4주</th><th>전세 1주</th><th>매수우위</th></tr></thead><tbody>${['서울','경기','인천'].map(row).join('')}</tbody></table></div>`; }
+// 구 화면 카드
+async function rebRegion(app,g){ const box=app.querySelector('#rebr'); if(!box) return;
+  const R=await rebFull(); if(!box.isConnected) return;
+  const d=R&&R.r&&R.r[g.c], m=REBN&&REBN.r&&REBN.r[g.c]; if(!d||!m){ box.remove(); return; }
+  box.style.display='';
+  box.innerHTML=`<h3>📈 부동산원 주간 지수 ${info('reb')}</h3><div class="cap">${nw(dK(REBN.wk)+' 기준')} · ${nw('조사 지수')} · ${nw(esc(REBN.base))}</div>
+    <div class="grid3">${cell('매매 1주',wp(m.w1))}${cell('매매 4주',wp(m.w4))}${cell('매매 12주',wp(m.w12))}</div>
+    <div class="grid3">${cell('매매 1년',wp(m.w52))}${cell('전세 1주',wp(m.j1))}${cell('전세 4주',wp(m.j4))}</div><div id="c-reb"></div>`;
+  lineChart(box.querySelector('#c-reb'), R.wks, d.s, {fmtAxis:v=>Math.round(v), name:'매매', ref:{name:'전세', ys:d.j},
+    tip:i=>`<b>${dK(R.dates[i])} 주</b><br>매매 ${d.s[i]!=null?d.s[i].toFixed(1):'–'}${d.j[i]!=null?'<br>전세 '+d.j[i].toFixed(1):''}`}); }
 // 📊 시장 신호(11/3) — 같은 지역들을 가격·거래량(작년 대비)·신고가 비율·전세가율로 바꿔 겹쳐 본다
-const CM=[['','가격'],['vol','거래량'],['hi','🔥 신고가'],['jr','전세가율']];   // 360폭 한 줄에 들어가게 짧게
+const CM=[['','가격'],['vol','거래량'],['hi','🔥 신고가'],['jr','전세가율'],['rs','📈 주간 매매'],['rj','📈 주간 전세']];
 function volYoy(v){ const n=v.length, o=new Array(n).fill(null);           // 최근 3개월 ÷ 작년 같은 3개월 − 1 (%)
   for(let i=14;i<n;i++){ const a=v[i]+v[i-1]+v[i-2], p=v[i-12]+v[i-13]+v[i-14]; if(p>=10) o[i]=Math.round((a/p-1)*1000)/10; } return o; }
 function sigSeries(m){ const k=st.cm; if(!m) return null;
@@ -515,8 +572,9 @@ function drawSig(app, S){ const box=app.querySelector('#c-cmp'), n=SUM.months.le
 function drawCmp(app){
   const box=app.querySelector('#c-cmp'); if(!box) return;
   app.querySelectorAll('[data-cm]').forEach(c=>c.onclick=()=>go({cm:c.dataset.cm}));
-  if(st.cm==='hi'&&st.k!=='apt') st.cm='';
+  if(['hi','rs','rj'].includes(st.cm)&&st.k!=='apt') st.cm='';
   const S=cmpSeries(), live=S.filter(x=>x.m), n=SUM.months.length;
+  if(st.cm==='rs'||st.cm==='rj'){ bindCmp(app); drawReb(app, S).then(()=>bindCmp(app)); return; }
   if(st.cm){ drawSig(app, S); bindCmp(app); return; }
   let i0=Math.max(0, st.cw==='1y'?n-13:st.cw==='3y'?n-37:0);
   while(i0<n-2 && live.some(x=>x.m.idx[i0]==null)) i0++;           // 모든 줄이 값을 가진 첫 달(빌라는 6개월 묶음이라 늦게 시작)
@@ -684,7 +742,8 @@ const HELP=[
     '지도 동그라미 색 = 오름(빨강)·내림(파랑), 크기 = 거래 수예요.',
     '동그라미를 누르면 목록에서 그 구가 반짝여요.',
     '📊 흐름 비교 = 서울·경기·인천에 고른 구를 3곳까지 겹쳐 봐요.',
-    '[가격][거래량][🔥 신고가][전세가율] 단추로 견줄 숫자를 바꿔요.',
+    '[가격][거래량][🔥 신고가][전세가율][📈 주간] 단추로 견줄 숫자를 바꿔요.',
+    '📈 부동산원 주간 = 매주 목요일 발표되는 조사 지수라 실거래보다 최근까지 보여요.',
     '📰 이번 주 = 매주 월요일, 지난주에 새로 신고된 거래예요.']],
   ['구 → 동 → 단지',['구 화면 지도: 아파트는 단지 점(색 = 최고가 대비), 빌라는 동 동그라미예요.',
     '가격 흐름의 회색 점선 = 시도 전체예요(동 화면은 구 전체).',
@@ -917,14 +976,15 @@ function renderList(app){
   app.innerHTML=`<div class="head">${vtabs('list')}
       <div class="sub">${nw(ymK(SUM.last)+' 계약분까지')} ${info('data')}<br>${nw('서울·경기·인천 '+SUM.regions.length+'곳')} · ${nw('2021년 1월부터')}</div></div>
     ${controls(true)}
+    ${rebCard()}
     ${cmpCard()}
     ${weekList(list)}
     <div class="lab">${HK()[1]} 사이 · ${KIND[st.k]} ${info('idx')}</div>
     ${highlights(list)}
     <div class="lab">정렬</div>
-    <div class="chips">${SORTS.filter(([k])=>k!=='hi'||st.k==='apt').map(([k,n])=>`<button class="chip ${st.o===k?'on':''}" data-o="${k}">${n}</button>`).join('')}</div>
+    <div class="chips">${SORTS.filter(([k])=>!['hi','w4'].includes(k)||st.k==='apt').map(([k,n])=>`<button class="chip ${st.o===k?'on':''}" data-o="${k}">${n}</button>`).join('')}</div>
     ${sorted.map(g=>{ const m=g[st.k]; return `<div class="card tap" data-r="${g.c}">
-      <div class="rtop"><div><span class="rname">${esc(g.n)}</span><span class="rsido">${g.s}</span></div>${m&&m.ok?spark(m.idx,m.c3):''}</div>
+      <div class="rtop"><div><span class="rname">${esc(g.n)}</span><span class="rsido">${g.s}</span>${sortTag(g)}</div>${m&&m.ok?spark(m.idx,m.c3):''}</div>
       ${m?metricsGrid(m):''}</div>`; }).join('')}
     <div class="foot">· 가격 흐름은 같은 단지·평형끼리만 비교해요.<br>· 숫자가 비어 있으면 거래가 적어서 지어내지 않은 거예요.<br>· 자료: 국토교통부 실거래가 공개시스템</div>`;
   bindControls(app); drawCmp(app);
@@ -977,6 +1037,7 @@ async function renderRegion(app){
   const D=await det(st.r); const dd=D[st.k];
   const sm=((SUM.sido||[]).find(x=>x.s===g.s)||{})[st.k];
   charts(app, m, dd.jrs, null, sm&&sm.ok?{name:g.s+' 전체', idx:sm.idx, self:g.n, hi:sm.hi}:null);
+  if(st.k==='apt'){ app.insertAdjacentHTML('beforeend','<div class="card ch" id="rebr" style="display:none"></div>'); rebRegion(app, g); }
   const dongs=dd.dongs.filter(x=>sum(x.vol.slice(-12))>0);
   app.insertAdjacentHTML('beforeend', `<div class="lab">동별 · 최근 12개월 거래 많은 순</div><div class="card" id="dl">${dongs.map(x=>`
     <div class="row" data-d="${esc(x.u)}"><div class="a"><div class="n">${esc(x.u)}</div><div class="m">${nw('12개월 '+sum(x.vol.slice(-12)).toLocaleString()+'건')}${x.jr!=null?' · '+nw('전세가율 '+Math.round(x.jr*100)+'%'):''}</div></div>
@@ -1141,6 +1202,7 @@ async function render(){
     if(!SUM) SUM=await getJSON(BASE+'summary.json');
     if(WEEK===undefined){ try{ WEEK=await getJSON(BASE+'week.json'); }catch(e){ WEEK=null; } }
     if(AUC===undefined){ try{ AUC=await getJSON(BASE+'auction.json'); }catch(e){ AUC=null; } }
+    if(REBN===undefined){ try{ REBN=await getJSON(BASE+'reb_now.json'); }catch(e){ REBN=null; } }
     if(!st.r && st.v==='home') await renderHome(app);
     else if(!st.r) renderList(app);
     else if(st.k==='apt' && st.d && st.x) await renderComplex(app);
