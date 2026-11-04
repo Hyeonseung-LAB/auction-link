@@ -718,11 +718,18 @@ async function renderHome(app){
   await loadHome();
   const c=COND, nav=vtabs('home');
   if(!c.plans||!c.plans.length){
-    const why=!CDB?'구글 시트에 연결이 안 돼요.<br>조건(예산·근무지)은 시트에만 있어서 연결돼야 보여요.<br>잠시 뒤 다시 열어 보세요.'
-      :!CKEY?'🔑 이 기기엔 두 번째 열쇠가 없어요.<br>조건(예산·근무지)은 개인 값이라 열쇠가 있는 기기에서만 보여요.<br>사장님 열쇠 링크를 이 기기에서 한 번 열어 주세요.'
+    const why=!CDB?'구글 시트에 연결이 안 돼요.<br>조건(예산·근무지)은 시트에만 있어서 연결돼야 보여요.<br>회사망이면 막혀 있을 수 있어요 — 폰(데이터)에서 열어 보세요.'
+      :!CKEY?'🔑 이 기기엔 두 번째 열쇠가 없어요.<br>조건(예산·근무지)은 개인 값이라 열쇠가 있는 기기에서만 보여요.<br>사장님 열쇠 링크를 이 브라우저에서 한 번 열거나, 아래 단추로 넣어 주세요.<br>열쇠는 브라우저마다 따로 저장돼요.<br><button class="vtab" id="keyb" style="margin-top:10px">🔑 열쇠 넣기</button>'
       :'조건이 아직 없어요.<br>예산·근무지는 우리 구글 시트에만 두고 여기서 읽어요.';
-    noMap(); app.innerHTML=`<div class="head">${nav}</div><div class="card"><div class="empty">${why}</div></div>`;
-    bindVtabs(app); return; }
+    noMap(); app.innerHTML=`<div class="head">${nav}</div><div class="card"><div class="empty" id="hwhy">${why}</div></div>`;
+    bindVtabs(app);
+    // 🔑 링크 대신 그 자리에서 넣기(11/4 회사 노트북) — 주소 #k2= 로 다시 읽으면 sheetdb.js 가 받아 넣고 주소창에서 지운다
+    const kb=app.querySelector('#keyb'); if(kb) kb.onclick=()=>{ let v=''; try{ v=(window.prompt('두 번째 열쇠를 넣어 주세요. 한 번 넣으면 이 브라우저에 남아요.')||'').trim(); }catch(e){}
+      if(/^[A-Za-z0-9_\-]{16,}$/.test(v)) location.hash='#k2='+v+'&v=home'; else if(v) app.querySelector('#hwhy').insertAdjacentHTML('beforeend','<br>열쇠 모양이 아니에요. 다시 확인해 주세요.'); };
+    // 열쇠는 있는데 조건을 못 읽었으면 통로가 막혔는지 본다 — 열쇠로 읽기는 POST 라, 회사망이 POST 만 막으면 공개 보기로 넘어가 '조건 없음'처럼 보인다(11/4)
+    if(CDB&&CKEY&&!SheetDB.MOCK) fetch(SheetDB.API,{method:'POST',body:'{}'}).then(r=>r.json()).catch(()=>{ const e=app.querySelector('#hwhy');
+      if(e) e.innerHTML='🔑 열쇠는 있는데 구글 시트에서 조건을 못 읽었어요.<br>이 네트워크(회사망 등)가 시트 통로를 막는 것 같아요.<br>폰(데이터)에서는 보일 거예요.'; });
+    return; }
   const rows=homeRows(), show=st.all?rows:rows.slice(0,40);
   const opt=(v,list)=>list.map(([x,t])=>`<option value="${x}"${String(v)===String(x)?' selected':''}>${t}</option>`).join('');
   const P0=c.plans[c.plan||0];
