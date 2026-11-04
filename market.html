@@ -1113,9 +1113,14 @@ async function renderDong(app){
 
 // ── 💬 이 값이면 급매일까?(11/2 4단계) — 매물 사이트는 약관상 긁지 않는다. 본 값을 사람이 넣으면 우리 실거래와 견준다.
 //    넣은 값은 구글 시트 notes/asks 에만(공개 파일엔 없음). 네이버 매물은 검색 창만 열어 준다(링크).
-function parseAsk(t){ t=String(t||'').replace(/[,\s원]/g,''); if(!t) return null;
-  const m=t.match(/^(\d+(?:\.\d+)?)억(\d+)?(?:만)?$/); if(m) return Math.round(+m[1]*10000+(m[2]?+m[2]:0));
-  const n=parseFloat(t.replace(/만$/,'')); if(isNaN(n)||n<=0) return null;
+function parseAsk(t){ t=String(t||'').replace(/[,\s원]/g,'').replace(/만$/,''); if(!t) return null;
+  // 억·천·백·만 단위를 다 읽는다('10억5천'·'12억 3천5백'·'5천'). 평·층·'매매' 같은 글자가 섞이면 읽지 않는다(null).
+  // 11/4 조사: 전엔 '10억5천'이 10억으로 조용히 틀렸다(앞 숫자만 읽고 경고도 없었음)
+  const u=(a,b,c,d)=>Math.round((a?+a*10000:0)+(b?+b*1000:0)+(c?+c*100:0)+(d?+d:0));
+  let m=t.match(/^(\d+(?:\.\d+)?)억(?:(\d+)천)?(?:(\d+)백)?(\d+)?$/); if(m) return u(m[1],m[2],m[3],m[4]);
+  m=t.match(/^(?:(\d+)천)?(?:(\d+)백)?(\d+)?$/); if(m&&(m[1]||m[2])) return u(0,m[1],m[2],m[3]);
+  if(/[^\d.]/.test(t)) return null;
+  const n=parseFloat(t); if(isNaN(n)||n<=0) return null;
   return n<1000?Math.round(n*10000):Math.round(n); }                 // 1000 미만은 억, 그 이상은 만원
 function qtile(a,q){ const s=a.slice().sort((x,y)=>x-y); if(!s.length) return null; const i=(s.length-1)*q, lo=Math.floor(i), hi=Math.ceil(i); return s[lo]+(s[hi]-s[lo])*(i-lo); }
 function judgeAsk(pts, ask, fl){
