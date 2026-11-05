@@ -293,6 +293,7 @@ select.fgu{border:1.5px solid #e3e8ef;border-radius:999px;padding:7px 13px;font-
 /* 권리를 못 읽은 물건 경고(11/5) — 카드 보기에만. 표 보기는 칩이 대신한다 */
 .pclist .c-rw{margin-top:4px;padding:3px 7px;border-radius:6px;background:#fff4e6;color:#c2410c;font-size:12px;font-weight:700;line-height:1.4;word-break:keep-all}
 .md .mdc.rw{color:#c2410c;font-weight:700}
+.pclist .rwi{display:none}
 .pclist .pc-card.fail{border-left:3px solid #dee2e6}
 .pclist .pc-card.nw{border-left:3px solid #3182f6}   /* 🆕 오늘 들어온 물건 */
 .pclist .nwtag{display:inline-block;margin-right:4px;padding:1px 5px;border-radius:5px;background:#3182f6;color:#fff;font-size:9.5px;font-weight:800;vertical-align:1px;letter-spacing:.02em}
@@ -395,6 +396,7 @@ select.fgu{border:1.5px solid #e3e8ef;border-radius:999px;padding:7px 13px;font-
   body.rows .pclist .tc .xp{color:#0f9d58}
   body.rows .pclist .tc .xn{color:#f04452}
   body.rows .pclist .tc .pc-md{margin:0}
+  body.rows .pclist .rwi{display:inline}
   body.rows .pclist .dopen{margin:0;padding:2px 6px;font-size:11px;justify-self:end;white-space:nowrap}
   /* 칸 — 필수(A)만: 점수·물건·최저가·낙찰 예상·예상 차익·입찰·상세 */
   body.rows .pclist{--tc:44px minmax(180px,1fr) 96px 84px 72px 44px 58px}
@@ -405,12 +407,12 @@ select.fgu{border:1.5px solid #e3e8ef;border-radius:999px;padding:7px 13px;font-
     .pc-ttl .ftag{display:none}
   }
   @container (min-width:1090px){  /* + 준공·역 도보·명도 */
-    .pc-thead,.pc-card{--tc:44px minmax(190px,1fr) 38px 96px 84px 84px 72px 44px 42px 112px 60px 44px 58px}
+    .pc-thead,.pc-card{--tc:44px minmax(190px,1fr) 38px 96px 84px 84px 72px 44px 42px 112px 76px 44px 58px}
     .t-c{display:block!important}
     .pc-ttl .pc-md{display:none}
   }
   @container (min-width:1270px){  /* + 최저가 차익·평당·세대·조회 */
-    .pc-thead,.pc-card{--tc:44px minmax(200px,1fr) 38px 96px 84px 62px 84px 72px 44px 54px 42px 50px 112px 60px 44px 44px 58px}
+    .pc-thead,.pc-card{--tc:44px minmax(200px,1fr) 38px 96px 84px 62px 84px 72px 44px 54px 42px 50px 112px 76px 44px 44px 58px}
     .t-d{display:block!important}
     .pc-ttl .case{display:inline!important}
   }
@@ -2334,7 +2336,7 @@ P.forEach((p,i)=>{
     +tc('t-c tl',mdchip)
     +tc('',p.sdate?p.sdate.slice(4,6)+'/'+p.sdate.slice(6,8):'')
     +tc('t-d',p.views?p.views.toLocaleString():'');
-  el.innerHTML=badge+'<div class="pc-m" style="min-width:0"><div class="pc-ttl">'+rk+(p.fs===TODAY?'<span class="nwtag">NEW</span>':'')+esc(p.title||'')+(p.title2?' · '+t2:'')
+  el.innerHTML=badge+'<div class="pc-m" style="min-width:0"><div class="pc-ttl">'+rk+(p.rw?'<span class="rwi" title="권리를 못 읽었어요 · '+RW_WARN+'">⚠️ </span>':'')+(p.fs===TODAY?'<span class="nwtag">NEW</span>':'')+esc(p.title||'')+(p.title2?' · '+t2:'')
     +(p.case?' <span class="case nw">'+esc(p.case)+'</span>':'')+ftag+mdchip+sdBadge(p)+'</div>'+tBefore
     +'<div class="pc-sub c-price">'+price+'</div>'+rwline+specline+mktline+exline+trans+tAfter+'</div>';
   el.addEventListener('click',e=>{if(e.ctrlKey||e.metaKey){e.preventDefault();cmpToggle(i);return;}   // Ctrl+클릭 = 비교함에 담기/빼기
