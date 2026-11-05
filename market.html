@@ -154,6 +154,11 @@ button{font:inherit;color:inherit}
 .hbox li{font-size:13.5px;line-height:1.6;color:var(--t2);margin:2px 0;word-break:keep-all}
 .nv{display:inline-block;margin-top:8px;padding:7px 12px;border-radius:999px;border:1.5px solid #03c75a;color:#03c75a;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap}
 .askrow{display:flex;gap:6px;margin-top:10px}
+.nsearch{margin:2px 0 12px}
+.nsearch input{width:100%;box-sizing:border-box;font:inherit;font-size:15px;font-weight:600;border:1.5px solid var(--line);border-radius:10px;padding:9px 12px;background:#fff}
+.nsearch input:focus{outline:none;border-color:var(--ink)}
+.nsr{margin-top:8px}
+.nsr .row:first-child{border-top:0}
 .askrow input{flex:1;min-width:0;font:inherit;font-size:15px;font-weight:700;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px}
 .askrow select{font:inherit;font-size:13px;font-weight:700;border:1.5px solid var(--line);border-radius:10px;padding:8px 4px;background:#fff}
 .askgo{border:0;background:var(--ink);color:#fff;border-radius:10px;padding:8px 14px;font-weight:800;cursor:pointer}
@@ -779,7 +784,8 @@ const HELP=[
     '[가격][거래량][🔥 신고가][전세가율][📈 주간] 단추로 견줄 숫자를 바꿔요.',
     '📈 부동산원 주간 = 매주 목요일 발표되는 조사 지수라 실거래보다 최근까지 보여요.',
     '📰 이번 주 = 매주 월요일, 지난주에 새로 신고된 거래예요.']],
-  ['구 → 동 → 단지',['구 화면 지도: 아파트는 단지 점(색 = 최고가 대비), 빌라는 동 동그라미예요.',
+  ['구 → 동 → 단지',['🔍 단지 찾기 = 이름을 치거나 네이버 공유 글을 붙여 넣으면 그 단지로 바로 가요.',
+    '구 화면 지도: 아파트는 단지 점(색 = 최고가 대비), 빌라는 동 동그라미예요.',
     '가격 흐름의 회색 점선 = 시도 전체예요(동 화면은 구 전체).',
     '단지 화면: 평형별 실거래 점, 🔥 = 그때까지 최고가예요.',
     '💬 이 값이면 급매일까? = 본 호가를 넣으면 최근 3개월 같은 평형·층대 거래와 견줘요.',
@@ -804,8 +810,36 @@ function openHelp(){ const d=document.createElement('div'); d.className='hmodal'
   document.body.appendChild(d); }
 // 📈 시장 온도계 ↔ 🏠 내 집 후보 단추(11/3) — 지금 보는 쪽이 까만 단추
 const vtabs=cur=>`<div class="vtabs"><button class="vtab${cur==='list'?' on':''}" data-vt="list">📈 시장 온도계</button>`
-  +`<button class="vtab${cur==='home'?' on':''}" data-vt="home">🏠 내 집 후보</button><button class="hlp" data-help="1" aria-label="사용법">❓</button></div>`;
-function bindVtabs(root){ root.querySelectorAll('[data-help]').forEach(b=>b.onclick=openHelp); root.querySelectorAll('[data-vt]').forEach(b=>b.onclick=()=>{ if(b.classList.contains('on')) return;
+  +`<button class="vtab${cur==='home'?' on':''}" data-vt="home">🏠 내 집 후보</button><button class="hlp" data-help="1" aria-label="사용법">❓</button></div>`
+  +`<div class="nsearch"><input id="nsq" type="search" autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="🔍 단지 이름으로 찾기" aria-label="단지 이름으로 찾기"><div id="nsr"></div></div>`;
+// 🔍 단지 이름 찾기(11/5) — 알림·당근·중개사 어디서 본 매물이든 그 단지 화면으로 바로. names.json 은 칸을 누를 때만 받는다.
+//  국토부 이름과 네이버 이름이 달라('LG빌리지'·'엘지빌리지') 영문 브랜드는 한글로 맞추고, 딱 맞는 게 없으면 비슷한 이름을 보여 준다(그렇다고 알린다).
+//  네이버 공유 글('[매매]단지명 509동 출처 : …')을 붙여 넣어도 이름만 남긴다.
+let NAMES=null, namesP=null;
+const NSA=[[/e편한/g,'이편한'],[/sk/g,'에스케이'],[/lg/g,'엘지'],[/gs/g,'지에스'],[/xi/g,'자이'],[/view/g,'뷰'],[/i-?park/g,'아이파크'],[/the/g,'더']];
+const nz=s=>{ s=String(s||'').toLowerCase(); for(const [a,b] of NSA) s=s.replace(a,b); return s.replace(/아파트|[\s·.,\-_()\[\]]/g,''); };
+const nsQuery=t=>String(t||'').replace(/\[[^\]]*\]/g,' ').replace(/출처.*$/s,' ').replace(/https?:\S+/g,' ').replace(/\s*\d{2,4}동(\s.*)?$/s,' ').replace(/\s+/g,' ').trim();
+function loadNames(){ if(!namesP) namesP=getJSON(BASE+'names.json').then(a=>{ const reg={}; SUM.regions.forEach(g=>reg[g.c]=g);
+    NAMES=a.map(r=>{ const g=reg[r[0]]||{}, nm=nz(r[3]); return {c:r[0],u:r[1],j:r[2],n:r[3],b:r[4],k:r[5],g:g.n||'',nm,all:nm+nz(g.n)+nz(r[1])}; }); }).catch(e=>{ namesP=null; throw e; });
+  return namesP; }
+function nsSearch(t){ const parts=t.split(' ').map(nz).filter(Boolean), key=parts.join(''); if(!key) return {rows:[]};
+  const hit=[]; for(const r of NAMES){ if(parts.every(p=>r.all.includes(p))) hit.push([r.nm===key?0:r.nm.startsWith(key)?1:r.nm.includes(key)?2:3, r]); }
+  if(hit.length) return {rows:hit.sort((a,b)=>a[0]-b[0]||b[1].k-a[1].k).map(h=>h[1])};
+  const bg=s=>{ const o=new Set(); for(let i=0;i<s.length-1;i++) o.add(s.slice(i,i+2)); return o; }, K=bg(key); if(K.size<2) return {rows:[]};
+  const sim=[]; for(const r of NAMES){ r.bg=r.bg||bg(r.nm); let m=0; for(const x of K) if(r.bg.has(x)) m++; const d=2*m/(K.size+r.bg.size); if(d>=.5) sim.push([d,r]); }
+  return {rows:sim.sort((a,b)=>b[0]-a[0]||b[1].k-a[1].k).slice(0,8).map(x=>x[1]), near:true}; }
+function bindNameSearch(root){ const q=root.querySelector('#nsq'), box=root.querySelector('#nsr'); if(!q) return; const MAX=30; let tm;
+  const show=async()=>{ const v=q.value, t=nsQuery(v); if(!t){ box.innerHTML=''; return; }
+    if(!NAMES){ box.innerHTML='<div class="empty">단지 이름을 받는 중…</div>'; try{ await loadNames(); }catch(e){ box.innerHTML='<div class="empty">단지 이름을 못 받았어요.<br>잠시 뒤 다시 해 주세요.</div>'; return; } if(q.value!==v) return; }
+    const {rows,near}=nsSearch(t), S=rows.slice(0,MAX);
+    box.innerHTML=!S.length?'<div class="empty">그런 이름의 단지를 못 찾았어요.<br>앞쪽 두세 글자만 쳐 보세요.</div>'
+      :(near?'<div class="lab">이름이 딱 맞는 단지가 없어요 · 비슷한 이름이에요</div>':'')
+      +`<div class="card nsr">${S.map((x,i)=>`<div class="row" data-ns="${i}"><div class="a"><div class="n">${esc(x.n)}</div><div class="m">${nw(esc(x.g+' '+x.u))}${x.b?' · '+nw(x.b+'년'):''}</div></div><div class="b"><div class="m">${nw('거래 '+x.k.toLocaleString()+'건')}</div></div></div>`).join('')}</div>`
+      +(rows.length>MAX?`<div class="lab">${rows.length.toLocaleString()}곳 중 ${MAX}곳까지 보여요 · 더 좁혀 주세요</div>`:'');
+    box.querySelectorAll('[data-ns]').forEach(el=>el.onclick=()=>{ const x=S[+el.dataset.ns]; go({v:null, r:x.c, d:x.u, x:x.j, a:null}); }); };
+  q.oninput=()=>{ clearTimeout(tm); tm=setTimeout(show,120); };
+  q.onfocus=()=>{ if(isMob()) setSheet(.84); loadNames().catch(()=>{}); }; }
+function bindVtabs(root){ bindNameSearch(root); root.querySelectorAll('[data-help]').forEach(b=>b.onclick=openHelp); root.querySelectorAll('[data-vt]').forEach(b=>b.onclick=()=>{ if(b.classList.contains('on')) return;
   go({v:b.dataset.vt==='home'?'home':null, r:null, d:null, x:null, a:null}); }); }
 async function renderHome(app){
   app.innerHTML='<div class="empty">불러오는 중…</div>';
