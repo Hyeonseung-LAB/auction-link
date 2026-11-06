@@ -1,0 +1,296 @@
+<!doctype html><html lang="ko" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><title>오늘 · 수도권 빌라 경매</title><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📌</text></svg>"><link rel="preconnect" href="https://cdn.jsdelivr.net"><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"><script src="sheetdb.js"></script></head><body>
+<!--sitebar--><style>.sbar{background:#fff;box-shadow:0 1px 0 rgba(20,30,60,.08);position:relative;z-index:40;
+  font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',Roboto,sans-serif}
+.sbar *{box-sizing:border-box}
+.sbin{max-width:min(1720px,96vw);margin:0 auto;padding:12px 20px 10px}
+.sbh{display:flex;align-items:center;gap:8px;height:30px;margin:0 0 8px;font-size:20px;line-height:30px;font-weight:800;color:#191f28;white-space:nowrap;letter-spacing:-.01em}
+.sbtab{line-height:1.2}
+.sbh .sbt{position:relative}
+.sbnew{display:inline-block;padding:2px 9px;border-radius:999px;background:#f04452;box-shadow:inset 0 0 0 200px #f04452;color:#fff;font-size:11.5px;font-weight:800}
+.sbtoday{position:relative;display:inline-block;padding:1px 10px;border-radius:999px;border:1.5px solid #e3e8ef;background:#fff;color:#4e5968;font-size:12px;line-height:20px;font-weight:700;letter-spacing:0}
+.sbtoday:hover{border-color:#3182f6;color:#3182f6}
+.sbtoday.on{background:#191f28;box-shadow:inset 0 0 0 200px #191f28;color:#fff;border-color:#191f28}
+.sbtabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.sbtabs::-webkit-scrollbar{display:none}
+.sbtab{position:relative;flex:0 0 auto;padding:9px 16px;border-radius:999px;font-size:13.5px;font-weight:700;line-height:1.2;
+  background:#fff;color:#6b7684;border:1.5px solid #e3e8ef;white-space:nowrap;cursor:pointer}
+.sbtab:hover{border-color:#3182f6;color:#3182f6}
+.sbtab.on{background:#191f28;box-shadow:inset 0 0 0 200px #191f28;color:#fff;border-color:#191f28}
+.sbar a.hit{position:absolute;inset:0;border-radius:inherit;z-index:1}
+@media(max-width:760px){
+  .sbin{max-width:100%;padding:0}
+  .sbh{display:none}
+  .sbtabs{gap:0}
+  .sbtab{flex:1 0 auto;text-align:center;border:0;border-radius:0;background:transparent;box-shadow:none;
+    padding:9px 3px 7px;font-size:12px;letter-spacing:-.02em;color:#8b95a1;border-bottom:2.5px solid transparent}   /* 360폭에 다섯 개가 다 들어가게 */
+  .sbtab:hover{color:#191f28}
+  .sbtab.on{background:transparent;box-shadow:none;color:#191f28;border-bottom-color:#191f28}
+}</style><div class="sbar" role="banner"><div class="sbin"><div class="sbh"><span class="sbt">🏡 수도권 빌라 경매<a class="hit" href="villa.html" aria-label="빌라 매물로"></a></span><span class="sbtoday on">📌 오늘<a class="hit" href="today.html" aria-label="오늘 화면으로"></a></span></div><nav class="sbtabs" aria-label="빌라 경매 사이트"><span class="sbtab">🏡 빌라 매물<a class="hit" href="villa.html" aria-label="빌라 매물"></a></span><span class="sbtab">🔨 매각 결과<a class="hit" href="villa_results.html" aria-label="매각 결과"></a></span><span class="sbtab">📅 일정<a class="hit" href="calendar.html" aria-label="경매 캘린더"></a></span><span class="sbtab">🧮 계산<a class="hit" href="calc.html" aria-label="경매 계산기"></a></span><span class="sbtab">📝 입찰<a class="hit" href="bids.html" aria-label="우리 입찰 기록"></a></span></nav></div></div><!--/sitebar-->
+<style>
+/* 📌 오늘 화면(11/6 개편 6번) — 오늘 기일 · 다가오는 일정 · 새 80점↑ · 입찰 결과를 한 화면에.
+   입찰 결과는 두 번째 열쇠가 있는 기기에서만 보인다(시트가 열쇠 없으면 비워서 준다). 폰 차례 = 오늘 → 입찰 → 새 80점↑ → 다가오는 일정 */
+:root{color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:#f2f4f7;color:#191f28;font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',Roboto,sans-serif;font-size:14.5px;line-height:1.5;word-break:keep-all;overflow-wrap:anywhere;-webkit-font-smoothing:antialiased}
+.nw{white-space:nowrap}
+.wrap{max-width:min(1720px,96vw);margin:0 auto;padding:14px 20px 80px}
+.head{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px}
+.head h1{margin:0;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.head .sub{color:#6b7684;font-size:13px}
+.head .to{margin-left:auto;position:relative;padding:5px 12px;border-radius:999px;border:1.5px solid #e3e8ef;background:#fff;color:#4e5968;font-size:12.5px;font-weight:700;white-space:nowrap}
+.head .to:hover{border-color:#3182f6;color:#3182f6}
+.hit{position:absolute;inset:0;border-radius:inherit;z-index:1}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}
+.kpi{position:relative;background:#fff;border-radius:14px;box-shadow:0 1px 3px rgba(20,30,60,.06);padding:11px 14px}
+.kpi:hover{box-shadow:0 0 0 1.5px #3182f6}
+.kpi .l{color:#6b7684;font-size:12.5px;font-weight:600}
+.kpi .v{font-size:24px;font-weight:800;line-height:1.25;font-variant-numeric:tabular-nums}
+.kpi .v small{font-size:13px;font-weight:600;margin-left:1px}
+.kpi.hot .v{color:#f04452}
+.board{display:grid;gap:14px;margin-top:14px;align-items:start;grid-template-columns:minmax(0,1fr);grid-template-areas:"today" "bids" "new" "up"}
+.sheet{background:#fff;border-radius:14px;box-shadow:0 1px 3px rgba(20,30,60,.06);min-width:0;scroll-margin-top:10px}
+.sheet>h2{display:flex;align-items:center;gap:8px;margin:0;padding:12px 16px 10px;font-size:15px;font-weight:800;border-bottom:1px solid #eef1f5}
+.sheet>h2 .n{color:#3182f6}
+.sheet>h2 .more{margin-left:auto;position:relative;color:#6b7684;font-size:12.5px;font-weight:600;white-space:nowrap}
+.sheet>h2 .more:hover{color:#3182f6}
+#s-today{grid-area:today}#s-up{grid-area:up}#s-new{grid-area:new;container-type:inline-size}#s-bids{grid-area:bids}
+.empty{margin:0;padding:14px 16px;color:#6b7684;font-size:13.5px}
+.empty small{display:block;margin-top:2px;font-size:12.5px;color:#8b95a1}
+/* 일정 줄 */
+.ev{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:10px 16px;border-top:1px solid #f2f4f7}
+.ev:first-of-type{border-top:0}
+.ev.lk:hover{background:#f7f9fc}
+.kind{padding:2px 8px;border-radius:6px;font-size:11.5px;font-weight:700;white-space:nowrap;color:var(--k);background:var(--ks)}
+.k-sale{--k:#d6293a;--ks:#ffeef0}.k-decide{--k:#1b64da;--ks:#e8f1fe}.k-pay{--k:#c2410c;--ks:#fff4e6}.k-visit{--k:#0f7a48;--ks:#e4f6ec}.k-due{--k:#6741b5;--ks:#f1ebfb}.k-etc{--k:#4e5968;--ks:#f2f4f7}
+.ev .nm{font-weight:700;min-width:0}
+.ev .nm small{display:block;font-weight:400;color:#6b7684;font-size:12.5px}
+.ev .dd{font-size:12.5px;font-weight:800;color:#d6293a;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+.ev .dd small{display:block;font-weight:500;color:#8b95a1;font-size:12px}
+#s-today .ev .dd{color:#191f28}
+/* 새 80점↑ — 칸은 카드 폭에 맞춰 줄인다 */
+.nh,.nr{display:grid;grid-template-columns:44px minmax(0,1fr) 78px 78px 78px 62px 70px;gap:0 10px;align-items:center;padding:0 16px}
+.nh{height:30px;color:#8b95a1;font-size:12px;font-weight:600;border-bottom:1px solid #f2f4f7}
+.nh span:nth-child(n+3):not(:last-child){text-align:right}
+.nr{position:relative;padding-block:9px;border-top:1px solid #f2f4f7}
+.nh+.nr{border-top:0}
+.nr:hover{background:#f7f9fc}
+.nr .sc{width:40px;height:24px;border-radius:7px;line-height:24px;text-align:center;color:#fff;font-size:12.5px;font-weight:800;background:var(--gc,#0f9d58);box-shadow:inset 0 0 0 200px var(--gc,#0f9d58)}
+.nr .nm{font-weight:700;min-width:0}
+.nr .nm small{display:block;font-weight:400;color:#6b7684;font-size:12px}
+.nr .re{display:block;font-weight:700;color:#c2410c;font-size:12px}
+.nr .facts{display:contents}
+.nr .c{text-align:right;font-size:13px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+.nr .c i{display:none;font-style:normal;font-weight:500;color:#8b95a1}
+.nr .c.dl small{display:block;color:#8b95a1;font-size:11.5px;font-weight:500}
+.nr .act{position:relative;z-index:2;justify-self:end}
+.ack{appearance:none;border:1.5px solid #3182f6;background:#fff;color:#3182f6;border-radius:999px;padding:3px 10px;font:inherit;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer}
+.ack:hover{background:#e8f1fe}
+.moreb{display:block;width:calc(100% - 32px);margin:8px 16px 14px;padding:8px;border:1.5px solid #e3e8ef;border-radius:10px;background:#fff;color:#4e5968;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.moreb:hover{border-color:#3182f6;color:#3182f6}
+@container (max-width:760px){
+  .nh,.nr{grid-template-columns:44px minmax(0,1fr) 78px 78px 62px 70px}
+  .nh .fv,.nr .c.fv{display:none}
+}
+@container (max-width:600px){
+  .nh{display:none}
+  .nr{grid-template-columns:44px minmax(0,1fr) auto;grid-template-areas:"s n a" "s f a";gap:3px 10px;align-items:start}
+  .nr .sc{grid-area:s}.nr .nm{grid-area:n}.nr .act{grid-area:a}
+  .nr .facts{grid-area:f;display:flex;flex-wrap:wrap;gap:0 10px}
+  .nr .c{text-align:left;font-size:12.5px}
+  .nr .c.fv{display:inline}
+  .nr .c i{display:inline}
+  .nr .c.dl small{display:inline;margin-left:4px}
+}
+/* 입찰 결과 */
+.bd{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:10px 16px;border-top:1px solid #f2f4f7}
+.bd:first-of-type{border-top:0}
+.bd:hover{background:#f7f9fc}
+.bd .nm{font-weight:700;min-width:0}
+.bd .nm small{display:block;font-weight:400;color:#6b7684;font-size:12.5px}
+.pill{align-self:start;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap;color:#fff;background:var(--pc);box-shadow:inset 0 0 0 200px var(--pc)}
+.bd .fx{grid-column:1/-1;color:#4e5968;font-size:12.5px;font-variant-numeric:tabular-nums}
+/* 되돌리기 */
+#undo{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:60;display:none;align-items:center;gap:12px;max-width:calc(100vw - 24px);padding:10px 14px;border-radius:12px;background:#191f28;box-shadow:inset 0 0 0 200px #191f28,0 6px 20px rgba(0,0,0,.25);color:#fff;font-size:13.5px}
+#undo.on{display:flex}
+#undob{appearance:none;border:0;background:none;color:#7fb3ff;font:inherit;font-weight:800;white-space:nowrap;cursor:pointer}
+@media (min-width:900px){
+  .board{grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);grid-template-areas:"today new" "up new" "bids new";grid-template-rows:auto auto 1fr}
+}
+@media (min-width:1500px){
+  .board{grid-template-columns:minmax(0,1fr) minmax(0,2fr) minmax(0,1fr);grid-template-areas:"today new bids" "up new bids";grid-template-rows:auto 1fr}
+}
+@media (max-width:560px){
+  .wrap{max-width:100%;padding:10px 12px 70px}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .kpi{padding:8px 12px}
+  .kpi .v{font-size:20px}
+}
+</style>
+<div class="wrap">
+  <div class="head">
+    <h1>오늘</h1>
+    <span class="sub" id="today-label"></span>
+    <span class="sub" id="stamp"></span>
+    <span class="to">🏢 서울 아파트 보기<a class="hit" href="apt.html" aria-label="서울 아파트 매물로"></a></span>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><div class="l">오늘 일정</div><div class="v" id="k-today">–</div><a class="hit" href="#s-today" aria-label="오늘 일정으로"></a></div>
+    <div class="kpi"><div class="l">입찰 결과 대기</div><div class="v" id="k-wait">–</div><a class="hit" href="#s-bids" aria-label="입찰 결과로"></a></div>
+    <div class="kpi"><div class="l">🆕 새 80점↑</div><div class="v" id="k-new">–</div><a class="hit" href="#s-new" aria-label="새 80점 이상으로"></a></div>
+    <div class="kpi"><div class="l">빌라 오늘 신규</div><div class="v" id="k-nc">–</div><a class="hit" href="villa.html" aria-label="빌라 매물로"></a></div>
+  </div>
+  <div class="board">
+    <section class="sheet" id="s-today"><h2>📅 오늘 일정 <span class="n" id="n-today"></span><span class="more">캘린더<a class="hit" href="calendar.html" aria-label="캘린더로"></a></span></h2><div id="l-today"><p class="empty">불러오는 중이에요.</p></div></section>
+    <section class="sheet" id="s-bids"><h2>📝 입찰 결과 <span class="n" id="n-bids"></span><span class="more">입찰 기록<a class="hit" href="bids.html" aria-label="입찰 기록으로"></a></span></h2><div id="l-bids"><p class="empty">불러오는 중이에요.</p></div></section>
+    <section class="sheet" id="s-new"><h2>🆕 새 80점↑ <span class="n" id="n-new"></span><span class="more">빌라 매물<a class="hit" href="villa.html" aria-label="빌라 매물로"></a></span></h2><div id="l-new"><p class="empty">불러오는 중이에요.</p></div></section>
+    <section class="sheet" id="s-up"><h2>🗓 다가오는 일정 <span class="n" id="n-up"></span><span class="more">14일 안<a class="hit" href="calendar.html" aria-label="캘린더로"></a></span></h2><div id="l-up"><p class="empty">불러오는 중이에요.</p></div></section>
+  </div>
+</div>
+<div id="undo" role="status"><span id="undot"></span><button type="button" id="undob">되돌리기</button></div>
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const pad=n=>String(n).padStart(2,'0');
+  const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  const NOW=new Date(), TODAY=ymd(NOW);
+  const parse=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||''); return m?new Date(+m[1],+m[2]-1,+m[3]):null;};
+  const dd=s=>{const d=parse(s); return d?Math.round((d-new Date(NOW.getFullYear(),NOW.getMonth(),NOW.getDate()))/864e5):null;};
+  const ddL=n=>n===0?'오늘':n>0?'D-'+n:(-n)+'일 전';
+  const md=s=>s?(+s.slice(5,7))+'/'+(+s.slice(8,10)):'';
+  const man=n=>{ if(!n) return '–'; const e=Math.floor(n/1e8), m=Math.round((n%1e8)/1e4); return (e?e+'억':'')+(m?m.toLocaleString()+'만':(e?'':'0')); };
+  const WEEK='일월화수목금토';
+  $('today-label').textContent=(NOW.getMonth()+1)+'월 '+NOW.getDate()+'일 ('+WEEK[NOW.getDay()]+')';
+
+  // 캘린더와 같은 규칙 — 이름·연결·칸 색
+  const KCLS={'매각기일':'k-sale','매각결정기일':'k-decide','대금지급기한':'k-pay','임장':'k-visit','입찰 신청 마감':'k-due'};
+  const HIDE=['패찰','종료'];     // 캘린더의 '패찰·종료된 물건 숨기기'와 같다
+  const ckey=c=>{const m=String(c||'').replace(/\s/g,'').match(/(\d{4})타경(\d+)(?:\((\d+)\))?/); return m?'c'+m[1]+'-'+m[2]+(m[3]?'-'+m[3]:''):'';};
+  const pidOf=it=>{const m=/[?&]pid=(\d+)/.exec(String(it.url||'')); return m?m[1]:'';};
+  const villaHref=(c,t,pid)=>{const k=ckey(c); if(!k)return ''; const q=new URLSearchParams({d:k,case:c||'',t:t||''}); if(pid)q.set('pid',pid); return 'villa.html#'+q.toString();};
+
+  let db=null, failed=false, items=null, acks=null, bids=null, today=null, todayErr=false, showAll=false;
+
+  function eventsOf(){
+    const out=[];
+    for(const it of items||[]){
+      if(HIDE.includes(it.status))continue;
+      for(const ev of it.events||[]) if(parse(ev.date)) out.push({...ev,item:it});
+    }
+    return out.sort((a,b)=>(a.date+(a.time||'')).localeCompare(b.date+(b.time||'')));
+  }
+  function evRow(e,withDay){
+    const it=e.item, name=it.title||it.caseNo||'(이름 없음)', n=dd(e.date), href=villaHref(it.caseNo,it.title,pidOf(it));
+    const sub=[it.caseNo,it.status||'관심',e.note].filter(Boolean).map(esc).join(' · ');
+    return `<div class="ev${href?' lk':''}"><span class="kind ${KCLS[e.kind]||'k-etc'}">${esc(e.kind||'기타')}</span>`
+      +`<div class="nm">${esc(name)}<small>${sub}</small></div>`
+      +`<div class="dd">${withDay?ddL(n)+`<small>${md(e.date)}${e.time?' '+esc(e.time):''}</small>`:esc(e.time||'')}</div>`
+      +(href?`<a class="hit" href="${esc(href)}" aria-label="${esc(name)} 상세"></a>`:'')+`</div>`;
+  }
+  function sheetMsg(){ return failed?'<p class="empty">저장소(구글 시트)에 연결하지 못했어요.<small>인터넷 연결을 확인하고 새로고침해 주세요.</small></p>':'<p class="empty">불러오는 중이에요.</p>'; }
+  function renderEvents(){
+    if(!items){ $('l-today').innerHTML=sheetMsg(); $('l-up').innerHTML=sheetMsg(); return; }
+    const all=eventsOf(), td=all.filter(e=>e.date===TODAY), up=all.filter(e=>{const n=dd(e.date); return n>0&&n<=14;});
+    $('k-today').innerHTML=td.length+'<small>건</small>'; $('k-today').parentNode.classList.toggle('hot',td.length>0);
+    $('n-today').textContent=td.length?td.length+'건':''; $('n-up').textContent=up.length?up.length+'건':'';
+    $('l-today').innerHTML=td.length?td.map(e=>evRow(e,false)).join(''):'<p class="empty">오늘은 관심 물건 일정이 없어요.</p>';
+    $('l-up').innerHTML=up.length?up.slice(0,10).map(e=>evRow(e,true)).join(''):'<p class="empty">앞으로 14일 안에 일정이 없어요.<small>⭐ 관심 물건에 매각기일을 넣으면 여기에 나와요.</small></p>';
+  }
+
+  // 🆕 — 빌라 페이지와 같은 기준: 80점↑ 인데 아직 확인 안 함 · 확인한 뒤 매각기일이 바뀜(🔁)
+  const NEW_LIMIT=()=>window.innerWidth<760?8:30;
+  const reNew=(r,a)=>!!(a&&a.sd&&r.sd&&a.sd!==r.sd);
+  function newRows(){ return !today||!acks?null:today.L.filter(r=>{const k=ckey(r.c), a=acks[k]; return k&&(!a||reNew(r,a));}); }
+  function nrHtml(r){
+    const k=ckey(r.c), a=acks[k], name=[r.t,r.t2].filter(Boolean).join(' '), n=dd(r.sd), href=villaHref(r.c,name,r.pid);
+    return `<div class="nr"><span class="sc" style="--gc:${esc(r.gc||'#0f9d58')}" title="${esc(r.gr)}">${r.s}</span>`
+      +`<div class="nm">${esc(name)}<small>${esc([r.g,r.c,r.f?'유찰 '+r.f+'회':'신건'].filter(Boolean).join(' · '))}</small>`
+      +(reNew(r,a)?`<span class="re">🔁 확인한 뒤 매각기일이 바뀌었어요 · ${md(a.sd)} → ${md(r.sd)}</span>`:'')+`</div>`
+      +`<div class="facts"><span class="c"><i>최저 </i>${man(r.b)}</span><span class="c"><i>예상 </i>${man(r.e)}</span><span class="c fv"><i>추정 실거래 </i>${man(r.v)}</span>`
+      +`<span class="c dl">${md(r.sd)}<small>${n==null?'':ddL(n)}</small></span></div>`
+      +`<span class="act"><button type="button" class="ack" data-k="${esc(k)}">✓ 확인</button></span>`
+      +(href?`<a class="hit" href="${esc(href)}" aria-label="${esc(name)} 상세"></a>`:'')+`</div>`;
+  }
+  function renderNew(){
+    if(todayErr){ $('l-new').innerHTML='<p class="empty">빌라 자료를 불러오지 못했어요.<small>빌라 매물 탭에서 볼 수 있어요.</small></p>'; return; }
+    const rows=newRows();
+    if(!rows){ $('l-new').innerHTML=failed&&today?sheetMsg():'<p class="empty">불러오는 중이에요.</p>'; return; }
+    $('k-new').innerHTML=rows.length+'<small>건</small>'; $('n-new').textContent=rows.length?rows.length+'건':'';
+    if(!rows.length){ $('l-new').innerHTML='<p class="empty">새로 볼 80점↑ 물건이 없어요.<small>모두 확인했어요.</small></p>'; return; }
+    const lim=showAll?rows.length:NEW_LIMIT();
+    $('l-new').innerHTML='<div class="nh"><span>점수</span><span>물건</span><span>최저가</span><span>낙찰 예상</span><span class="fv">추정 실거래가</span><span>매각기일</span><span></span></div>'
+      +rows.slice(0,lim).map(nrHtml).join('')
+      +(rows.length>lim?`<button type="button" class="moreb" id="morenew">${rows.length-lim}건 더 보기</button>`:'');
+  }
+
+  const WAITING=['대기',''];
+  const PC={'낙찰':'#0f9d58','패찰':'#f04452','대기':'#3182f6','유찰':'#8b95a1','변경·취하':'#8b95a1','기타':'#8b95a1'};
+  function bdRow(b){
+    const r=b.result||'대기', n=dd(b.date), bits=[];
+    if(b.bid)bits.push('우리 입찰가 '+man(b.bid));
+    if(b.sale)bits.push('낙찰가 '+man(b.sale));
+    if(b.sale&&b.bid&&r!=='낙찰')bits.push('차이 '+man(Math.abs(b.sale-b.bid)));
+    if(b.bidders)bits.push(b.bidders+'명');
+    const label=r==='대기'?(n>0?'입찰 예정':n===0?'오늘 결과 대기':'결과 대기'):r;
+    return `<div class="bd"><div class="nm">${esc(b.title||b.case||'')}<small>${esc([md(b.date)+' '+(n==null?'':ddL(n)),b.case].filter(Boolean).join(' · '))}</small></div>`
+      +`<span class="pill" style="--pc:${PC[r]||'#8b95a1'}">${esc(label)}</span>`
+      +(bits.length?`<div class="fx">${bits.map(x=>`<span class="nw">${esc(x)}</span>`).join(' · ')}</div>`:'')
+      +`<a class="hit" href="bids.html" aria-label="입찰 기록으로"></a></div>`;
+  }
+  function renderBids(){
+    if(window.SheetDB&&!SheetDB.hasKey()&&!SheetDB.MOCK){
+      $('k-wait').textContent='–'; $('n-bids').textContent='';
+      $('l-bids').innerHTML='<p class="empty">이 기기엔 두 번째 열쇠가 없어요.<small>입찰 기록은 열쇠가 있는 기기에서만 보여요.</small></p>'; return;
+    }
+    if(!bids){ $('l-bids').innerHTML=sheetMsg(); return; }
+    const wait=bids.filter(b=>WAITING.includes(b.result||'')&&dd(b.date)!=null&&dd(b.date)>=-3);
+    const done=bids.filter(b=>!WAITING.includes(b.result||'')&&dd(b.date)!=null&&dd(b.date)<=0&&dd(b.date)>=-14);
+    const sortW=(x,y)=>String(x.date).localeCompare(String(y.date)), sortD=(x,y)=>String(y.date).localeCompare(String(x.date));
+    const rows=[...wait.sort(sortW),...done.sort(sortD)];
+    const nw=wait.filter(b=>dd(b.date)<=0).length;
+    $('k-wait').innerHTML=nw+'<small>건</small>'; $('k-wait').parentNode.classList.toggle('hot',nw>0);
+    $('n-bids').textContent=rows.length?rows.length+'건':'';
+    $('l-bids').innerHTML=rows.length?rows.slice(0,10).map(bdRow).join(''):'<p class="empty">최근 2주 안에 입찰 기록이 없어요.</p>';
+  }
+  function render(){ renderEvents(); renderNew(); renderBids(); }
+
+  // ✓ 확인 — 빌라 페이지와 같은 문서·같은 되돌리기
+  let undoK=null, undoPrev=null, undoT=null;
+  function saveErr(e,base){ alert(e&&e.code==='k2'?'이 기기엔 두 번째 열쇠가 없어 저장하지 못했어요. 사장님이 보낸 열쇠 링크를 한 번 열어 주세요.':base); }
+  document.addEventListener('click',e=>{
+    const m=e.target.closest&&e.target.closest('#morenew');
+    if(m){ showAll=true; renderNew(); return; }
+    const u=e.target.closest&&e.target.closest('#undob');
+    if(u){ $('undo').classList.remove('on'); clearTimeout(undoT); const k=undoK, prev=undoPrev; undoK=null; undoPrev=null;
+      if(k&&db)(prev?db.collection('acks').doc(k).set(prev):db.collection('acks').doc(k).delete()).catch(err=>saveErr(err,'되돌리지 못했어요. 빌라 매물 카드의 ✓ 확인함을 눌러 다시 해 주세요.'));
+      return; }
+    const b=e.target.closest&&e.target.closest('.ack');
+    if(!b)return;
+    e.preventDefault(); e.stopPropagation();
+    if(!db){ alert('저장소(구글 시트)에 연결하는 중이에요. 잠시 뒤 다시 눌러 주세요.'); return; }
+    const k=b.dataset.k, r=today.L.find(x=>ckey(x.c)===k); if(!r)return;
+    const prev=acks[k]?JSON.parse(JSON.stringify(acks[k])):null, name=r.t2||r.t||r.c;
+    undoK=k; undoPrev=prev; $('undot').textContent='‘'+name+'’ 확인했어요'; $('undo').classList.add('on');
+    clearTimeout(undoT); undoT=setTimeout(()=>{ $('undo').classList.remove('on'); undoK=null; },8000);
+    db.collection('acks').doc(k).set({title:[r.t,r.t2].filter(Boolean).join(' '),caseNo:r.c,score:r.s,at:new Date().toISOString(),sd:r.sd,base:r.b,fail:r.f})
+      .catch(err=>{ $('undo').classList.remove('on'); saveErr(err,'저장하지 못했어요. 잠시 뒤 다시 눌러 주세요.'); });
+  });
+
+  fetch('villa_today.json',{cache:'no-cache'}).then(r=>{ if(!r.ok)throw new Error(r.status); return r.json(); }).then(j=>{
+    today=j;
+    $('k-nc').innerHTML=(j.nc||0)+'<small>건</small>';
+    const d=String(j.t||''); $('stamp').textContent='빌라 자료 '+(d.slice(0,10)===TODAY?'오늘 '+d.slice(11,16):md(d.slice(0,10))+' '+d.slice(11,16));
+    renderNew();
+  }).catch(()=>{ todayErr=true; renderNew(); });
+
+  render();
+  (async()=>{
+    try{ db=await SheetDB.use(); }catch(e){ db=null; }
+    if(!db){ failed=true; render(); return; }
+    db.collection('items').onSnapshot(s=>{ items=s.docs.map(d=>({id:d.id,...d.data()})); renderEvents(); });
+    db.collection('acks').onSnapshot(s=>{ const o={}; s.docs.forEach(d=>{ if(d.exists)o[d.id]=d.data()||{}; }); acks=o; renderNew(); });
+    db.collection('bids').onSnapshot(s=>{ bids=s.docs.map(d=>({id:d.id,...d.data()})); renderBids(); });
+  })();
+})();
+</script>
+</body></html>
