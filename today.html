@@ -47,6 +47,13 @@ body{margin:0;background:#f2f4f7;color:#191f28;font-family:'Pretendard Variable'
 .kpi .v{font-size:24px;font-weight:800;line-height:1.25;font-variant-numeric:tabular-nums}
 .kpi .v small{font-size:13px;font-weight:600;margin-left:1px}
 .kpi.hot .v{color:#f04452}
+/* 기일 지난 관심 물건 한 줄(11/6) — 정리할 물건을 놓치지 않게. 없으면 안 보인다 */
+.stale{position:relative;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;margin-top:10px;padding:9px 14px;border-radius:12px;background:#fff;border-left:4px solid #f59f00;box-shadow:0 1px 3px rgba(20,30,60,.06)}
+.stale[hidden]{display:none}
+.stale:hover{box-shadow:0 0 0 1.5px #3182f6}
+.stale b{font-size:14px;font-weight:800;color:#b45309}
+.stale small{color:#6b7684;font-size:12.5px}
+.stale .go{margin-left:auto;color:#6b7684;font-size:12.5px;font-weight:600;white-space:nowrap}
 .board{display:grid;gap:14px;margin-top:14px;align-items:start;grid-template-columns:minmax(0,1fr);grid-template-areas:"today" "bids" "new" "up"}
 .sheet{background:#fff;border-radius:14px;box-shadow:0 1px 3px rgba(20,30,60,.06);min-width:0;scroll-margin-top:10px}
 .sheet>h2{display:flex;align-items:center;gap:8px;margin:0;padding:12px 16px 10px;font-size:15px;font-weight:800;border-bottom:1px solid #eef1f5}
@@ -139,6 +146,7 @@ body{margin:0;background:#f2f4f7;color:#191f28;font-family:'Pretendard Variable'
     <div class="kpi"><div class="l">🆕 새 80점↑</div><div class="v" id="k-new">–</div><a class="hit" href="#s-new" aria-label="새 80점 이상으로"></a></div>
     <div class="kpi"><div class="l">빌라 오늘 신규</div><div class="v" id="k-nc">–</div><a class="hit" href="villa.html" aria-label="빌라 매물로"></a></div>
   </div>
+  <div class="stale" id="stale" hidden><b id="stale-t"></b><small>결과를 적거나 다음 기일을 넣어 주세요</small><span class="go">캘린더</span><a class="hit" href="calendar.html" aria-label="캘린더에서 정리하기"></a></div>
   <div class="board">
     <section class="sheet" id="s-today"><h2>📅 오늘 일정 <span class="n" id="n-today"></span><span class="more">캘린더<a class="hit" href="calendar.html" aria-label="캘린더로"></a></span></h2><div id="l-today"><p class="empty">불러오는 중이에요.</p></div></section>
     <section class="sheet" id="s-bids"><h2>📝 입찰 결과 <span class="n" id="n-bids"></span><span class="more">입찰 기록<a class="hit" href="bids.html" aria-label="입찰 기록으로"></a></span></h2><div id="l-bids"><p class="empty">불러오는 중이에요.</p></div></section>
@@ -179,6 +187,15 @@ body{margin:0;background:#f2f4f7;color:#191f28;font-family:'Pretendard Variable'
     }
     return out.sort((a,b)=>(a.date+(a.time||'')).localeCompare(b.date+(b.time||'')));
   }
+  // 지난 매각기일만 남은 물건 — 결과를 안 적었거나 다음 기일을 안 넣은 것. 낙찰·재매각 대기는 일부러 기다리는 중이라 안 센다
+  const OPEN=['관심','입찰 예정','입찰 완료'];
+  function staleItems(){
+    return (items||[]).filter(it=>{
+      if(!OPEN.includes(it.status||'관심'))return false;
+      const evs=(it.events||[]).filter(e=>parse(e.date));
+      return evs.some(e=>e.kind==='매각기일'&&dd(e.date)<0)&&!evs.some(e=>dd(e.date)>=0);
+    });
+  }
   function evRow(e,withDay){
     const it=e.item, name=it.title||it.caseNo||'(이름 없음)', n=dd(e.date), href=villaHref(it.caseNo,it.title,pidOf(it));
     const sub=[it.caseNo,it.status||'관심',e.note].filter(Boolean).map(esc).join(' · ');
@@ -190,6 +207,9 @@ body{margin:0;background:#f2f4f7;color:#191f28;font-family:'Pretendard Variable'
   function sheetMsg(){ return failed?'<p class="empty">저장소(구글 시트)에 연결하지 못했어요.<small>인터넷 연결을 확인하고 새로고침해 주세요.</small></p>':'<p class="empty">불러오는 중이에요.</p>'; }
   function renderEvents(){
     if(!items){ $('l-today').innerHTML=sheetMsg(); $('l-up').innerHTML=sheetMsg(); return; }
+    const st=staleItems(), sb=$('stale');
+    sb.hidden=!st.length; $('stale-t').textContent='⏰ 기일 지난 관심 물건 '+st.length+'건';
+    sb.title=st.map(it=>it.title||it.caseNo||'').join('\n');
     const all=eventsOf(), td=all.filter(e=>e.date===TODAY), up=all.filter(e=>dd(e.date)>0);
     $('k-today').innerHTML=td.length+'<small>건</small>'; $('k-today').parentNode.classList.toggle('hot',td.length>0);
     $('n-today').textContent=td.length?td.length+'건':''; $('n-up').textContent=up.length?up.length+'건':'';
