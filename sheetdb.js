@@ -233,5 +233,17 @@
     return loading;
   }
 
-  window.SheetDB = { use, API, MOCK, hasKey: () => !!k2, forgetKey: () => { k2 = ''; saveK2(''); } };
+  // 🔒 잠근 자료 파일(villa_today.json·villa_watch.json) 풀기 — pagelock.py 와 같은 방식(11/6). 안 잠긴 자료는 그대로 돌려준다
+  async function openLocked(j) {
+    if (!j || !j.lock) return j;
+    if (!k2) throw Object.assign(new Error('k2'), { code: 'k2' });
+    const enc = new TextEncoder(), bin = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+    const base = await crypto.subtle.importKey('raw', enc.encode(k2), 'HKDF', false, ['deriveKey']);
+    const key = await crypto.subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: bin(j.s), info: enc.encode('auction-link-lock-v1') },
+      base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bin(j.i) }, key, bin(j.d));
+    return JSON.parse(await new Response(new Blob([plain]).stream().pipeThrough(new DecompressionStream('gzip'))).text());
+  }
+
+  window.SheetDB = { use, API, MOCK, hasKey: () => !!k2, forgetKey: () => { k2 = ''; saveK2(''); }, openLocked };
 })();
