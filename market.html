@@ -142,6 +142,14 @@ button{font:inherit;color:inherit}
 .vtabs{display:flex;gap:8px;margin:6px 0 12px;flex-wrap:wrap}
 .vtab{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:8px 15px;font-size:14px;font-weight:800;color:var(--t2);cursor:pointer;white-space:nowrap}
 .vtab.on{background:var(--ink);border-color:var(--ink);color:#fff}
+@media(max-width:420px){.vtabs{gap:6px}.vtab{padding:8px 10px;font-size:13px}}
+.dl .top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.dl .vd{font-weight:800;font-size:14px}
+.dl .nm{font-weight:800;font-size:15px;margin-top:4px}
+.dl .pr{font-size:18px;font-weight:800;margin-top:6px}
+.dl .m{font-size:12.5px;color:var(--t2);line-height:1.6;word-break:keep-all}
+.dl a.nv{text-decoration:none}
+@media(min-width:761px){.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.dgrid .card{margin:0}}
 /* ❓ 사용법 창(11/3) — 폰은 아래에서 올라오는 판, PC 는 가운데 */
 .vtabs .hlp{margin-left:auto;border:1.5px solid var(--line);background:#fff;border-radius:999px;width:38px;height:38px;font-size:16px;cursor:pointer;flex:0 0 auto}
 .hmodal{position:fixed;inset:0;z-index:3000;background:rgba(20,25,35,.45);display:flex;align-items:flex-end;justify-content:center}
@@ -798,7 +806,8 @@ const HELP=[
     '🚇 역·🚌 버스까지 걸어서 = 직선거리로 어림한 값이에요.',
     '🕒 출퇴근 = 지하철만 어림했어요(기다림 3분·갈아타기 5분, 버스는 안 셈).',
     '⭐ 관심 단지는 목록과 지도 ⭐로 보여요.',
-    '매일 09:30 개인 채팅: 후보 단지 경매 알림, 관심 단지 새 실거래 알림.']],
+    '매일 09:30 개인 채팅: 후보 단지 경매 알림, 관심 단지 새 실거래 알림.',
+    '🏷 매물 = 폰 알림으로 받은 네이버 새 매물을 실거래보다 싼 순으로 보여 줘요(열쇠 있는 기기만).']],
   ['폰에서',['목록은 아래 시트예요.',
     '손잡이를 끌면 접기·반·전체로 붙어요.',
     '손잡이를 톡 누르면 접기 ↔ 반으로 바뀌어요.']]];
@@ -810,7 +819,7 @@ function openHelp(){ const d=document.createElement('div'); d.className='hmodal'
   document.body.appendChild(d); }
 // 📈 시장 온도계 ↔ 🏠 내 집 후보 단추(11/3) — 지금 보는 쪽이 까만 단추
 const vtabs=cur=>`<div class="vtabs"><button class="vtab${cur==='list'?' on':''}" data-vt="list">📈 시장 온도계</button>`
-  +`<button class="vtab${cur==='home'?' on':''}" data-vt="home">🏠 내 집 후보</button><button class="hlp" data-help="1" aria-label="사용법">❓</button></div>`
+  +`<button class="vtab${cur==='home'?' on':''}" data-vt="home">🏠 내 집 후보</button>${canSave()?`<button class="vtab${cur==='deals'?' on':''}" data-vt="deals">🏷 매물</button>`:''}<button class="hlp" data-help="1" aria-label="사용법">❓</button></div>`
   +`<div class="nsearch"><input id="nsq" type="search" autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="🔍 단지 이름으로 찾기" aria-label="단지 이름으로 찾기"><div id="nsr"></div></div>`;
 // 🔍 단지 이름 찾기(11/5) — 알림·당근·중개사 어디서 본 매물이든 그 단지 화면으로 바로. names.json 은 칸을 누를 때만 받는다.
 //  국토부 이름과 네이버 이름이 달라('LG빌리지'·'엘지빌리지') 영문 브랜드는 한글로 맞추고, 딱 맞는 게 없으면 비슷한 이름을 보여 준다(그렇다고 알린다).
@@ -840,7 +849,7 @@ function bindNameSearch(root){ const q=root.querySelector('#nsq'), box=root.quer
   q.oninput=()=>{ clearTimeout(tm); tm=setTimeout(show,120); };
   q.onfocus=()=>{ if(isMob()) setSheet(.84); loadNames().catch(()=>{}); }; }
 function bindVtabs(root){ bindNameSearch(root); root.querySelectorAll('[data-help]').forEach(b=>b.onclick=openHelp); root.querySelectorAll('[data-vt]').forEach(b=>b.onclick=()=>{ if(b.classList.contains('on')) return;
-  go({v:b.dataset.vt==='home'?'home':null, r:null, d:null, x:null, a:null}); }); }
+  go({v:b.dataset.vt==='list'?null:b.dataset.vt, r:null, d:null, x:null, a:null}); }); }
 async function renderHome(app){
   app.innerHTML='<div class="empty">불러오는 중…</div>';
   await loadHome();
@@ -1207,6 +1216,30 @@ async function askRemove(key, at){ const db=await askDB(); if(!db) return [];
 function askListHtml(list){ if(!list||!list.length) return '';
   return '<div class="lab" style="margin-top:12px">넣어 본 값</div>'+list.map(x=>`<div class="row" style="cursor:default"><div class="a"><div class="n">${nw(man(x.v))}${x.fl?' · '+(x.fl==='low'?'1~3층':'4층 이상'):''}</div><div class="m">${nw(esc(x.at.slice(0,10)))} · ${esc(x.verdict||'')}</div></div><div class="b">${canSave()?`<button class="home" data-del="${esc(x.at)}">✕</button>`:''}</div></div>`).join(''); }
 
+// 🏷 매물 판(11/6 사장님 '경매처럼 체리피킹') — 알림 건 단지의 새 매물을 실거래와 견줘 싼 순으로. market_listings.py 가 시트 notes/listings(두 번째 열쇠로만 읽힘)에 올린다.
+//  공개 파일엔 호가가 없다. 판단 기준은 💬 judgeAsk 와 같고, 알림 글에 층이 없어 모든 층으로 본다.
+let DEALF='all';
+async function renderDeals(app){ noMap(); app.innerHTML='<div class="empty">불러오는 중…</div>'; await loadCond();
+  const nav=vtabs('deals');
+  if(!CKEY){ app.innerHTML=`<div class="head">${nav}</div><div class="card"><div class="empty">🔑 이 판은 두 번째 열쇠가 있는 기기에서만 보여요.</div></div>`; bindVtabs(app); return; }
+  let rows=[]; try{ const s=await CDB.doc('notes/listings').get(); rows=(s.exists&&s.data().rows)||[]; }catch(e){}
+  const cheap=rows.filter(x=>x.m==='🔥'||x.m==='🟢'), show=DEALF==='cheap'?cheap:rows, tm=t=>{ const m=/^\d{4}-(\d\d)-(\d\d)T(\d\d:\d\d)/.exec(t||''); return m?`${+m[1]}/${+m[2]} ${m[3]}`:''; };
+  app.innerHTML=`<div class="head">${nav}<div class="sub">${nw('알림 건 단지의 새 매물')} · ${nw('실거래보다 싼 순')}<br>${nw('최근 60일 '+rows.length+'건 · 싼 편 '+cheap.length+'건')}</div></div>
+    <div class="chips"><button class="chip ${DEALF==='all'?'on':''}" data-df="all">전체</button><button class="chip ${DEALF==='cheap'?'on':''}" data-df="cheap">🔥🟢 싼 편만</button></div>
+    <div class="dgrid">${show.map(x=>{ const [c,u,j]=String(x.k).split('|'), g=SUM.regions.find(r=>r.c===c)||{n:''};
+      return `<div class="card tap dl" data-dk="${esc(x.k)}" data-db="${x.b||''}"><div class="top"><div class="vd">${esc(x.m||'')} ${esc(x.v||'')}</div><div class="m">${nw(tm(x.t))}</div></div>
+        <div class="nm">${esc(x.n)}${x.d?' '+esc(x.d):''}</div><div class="m">${nw(esc(g.n+' '+u))}${x.ar?' · '+nw('전용 '+x.ar+'㎡'):''} · ${nw('층 모름')}</div>
+        <div class="pr">${man(x.a)}</div>
+        ${x.ref?`<div class="m">${nw(esc(x.w||'최근')+' 중위 '+man(x.ref)+'('+x.rn+'건)보다 ')}${pctH(x.r)}</div>`:''}
+        ${x.y!=null?`<div class="m">${nw('1년 '+x.y+'건 중 '+x.c+'건이 이보다 쌌어요')}</div>`:''}
+        <a class="nv" target="_blank" rel="noopener" href="https://m.land.naver.com/search/result/${encodeURIComponent(g.n+' '+u+' '+x.n)}">네이버 매물 →</a></div>`; }).join('')
+      ||`<div class="card"><div class="empty">${rows.length?'지금은 싼 편으로 나온 매물이 없어요.':'아직 받은 매물이 없어요.<br>폰 알림 전달을 마치면 여기에 쌓여요.'}</div></div>`}</div>
+    <div class="foot">· 네이버 전체가 아니라 알림을 건 단지의 새 매물만 보여요.<br>· 호가를 직거래 뺀 최근 실거래 중위와 견줬어요.<br>· 알림 글에 층이 없어 모든 층과 견줘요.<br>· 저층이면 싸게, 고층이면 비싸게 보이지 않는지 확인이 필요해요.<br>· 싼 데는 이유가 있을 수 있어요(수리 상태·세입자·입주일).<br>· 호가는 우리 시트에만 있고 공개 파일엔 없어요.</div>`;
+  bindVtabs(app);
+  app.querySelectorAll('[data-df]').forEach(b=>b.onclick=()=>{ DEALF=b.dataset.df; render(); });
+  app.querySelectorAll('.dl a').forEach(a=>a.onclick=e=>e.stopPropagation());
+  app.querySelectorAll('[data-dk]').forEach(el=>el.onclick=()=>{ const [c,u,j]=el.dataset.dk.split('|'); go({v:null, r:c, d:u, x:j, a:el.dataset.db||null}); }); }
+
 // 🔨 지금 경매 중(11/3) — 경매 사이트 목록(매일 아침)에서 이 단지와 구·동·지번이 같은 물건. 최저가를 최근 실거래 기준(💬 와 같은 셈)과 견줌
 // 📊 지난 낙찰이 시세보다 얼마나 쌌나(11/4) — market_auction.sale_stats. 지역 낙찰이 적으면 수도권 전체. 숫자 근거는 인계 8장
 function aucStat(sd){ const S=AUC&&AUC.st; if(!S||!S.all) return '';
@@ -1293,6 +1326,7 @@ async function render(){
     if(AUC===undefined){ try{ AUC=await getJSON(BASE+'auction.json'); }catch(e){ AUC=null; } }
     if(REBN===undefined){ try{ REBN=await getJSON(BASE+'reb_now.json'); }catch(e){ REBN=null; } }
     if(!st.r && st.v==='home') await renderHome(app);
+    else if(!st.r && st.v==='deals') await renderDeals(app);
     else if(!st.r) renderList(app);
     else if(st.k==='apt' && st.d && st.x) await renderComplex(app);
     else if(st.d) await renderDong(app);
