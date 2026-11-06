@@ -143,7 +143,7 @@ body{margin:0;background:#f2f4f7;color:#191f28;font-family:'Pretendard Variable'
     <section class="sheet" id="s-today"><h2>📅 오늘 일정 <span class="n" id="n-today"></span><span class="more">캘린더<a class="hit" href="calendar.html" aria-label="캘린더로"></a></span></h2><div id="l-today"><p class="empty">불러오는 중이에요.</p></div></section>
     <section class="sheet" id="s-bids"><h2>📝 입찰 결과 <span class="n" id="n-bids"></span><span class="more">입찰 기록<a class="hit" href="bids.html" aria-label="입찰 기록으로"></a></span></h2><div id="l-bids"><p class="empty">불러오는 중이에요.</p></div></section>
     <section class="sheet" id="s-new"><h2>🆕 새 80점↑ <span class="n" id="n-new"></span><span class="more">빌라 매물<a class="hit" href="villa.html" aria-label="빌라 매물로"></a></span></h2><div id="l-new"><p class="empty">불러오는 중이에요.</p></div></section>
-    <section class="sheet" id="s-up"><h2>🗓 다가오는 일정 <span class="n" id="n-up"></span><span class="more">14일 안<a class="hit" href="calendar.html" aria-label="캘린더로"></a></span></h2><div id="l-up"><p class="empty">불러오는 중이에요.</p></div></section>
+    <section class="sheet" id="s-up"><h2>🗓 다가오는 일정 <span class="n" id="n-up"></span><span class="more">캘린더<a class="hit" href="calendar.html" aria-label="캘린더로"></a></span></h2><div id="l-up"><p class="empty">불러오는 중이에요.</p></div></section>
   </div>
 </div>
 <div id="undo" role="status"><span id="undot"></span><button type="button" id="undob">되돌리기</button></div>
@@ -190,11 +190,11 @@ body{margin:0;background:#f2f4f7;color:#191f28;font-family:'Pretendard Variable'
   function sheetMsg(){ return failed?'<p class="empty">저장소(구글 시트)에 연결하지 못했어요.<small>인터넷 연결을 확인하고 새로고침해 주세요.</small></p>':'<p class="empty">불러오는 중이에요.</p>'; }
   function renderEvents(){
     if(!items){ $('l-today').innerHTML=sheetMsg(); $('l-up').innerHTML=sheetMsg(); return; }
-    const all=eventsOf(), td=all.filter(e=>e.date===TODAY), up=all.filter(e=>{const n=dd(e.date); return n>0&&n<=14;});
+    const all=eventsOf(), td=all.filter(e=>e.date===TODAY), up=all.filter(e=>dd(e.date)>0);
     $('k-today').innerHTML=td.length+'<small>건</small>'; $('k-today').parentNode.classList.toggle('hot',td.length>0);
     $('n-today').textContent=td.length?td.length+'건':''; $('n-up').textContent=up.length?up.length+'건':'';
     $('l-today').innerHTML=td.length?td.map(e=>evRow(e,false)).join(''):'<p class="empty">오늘은 관심 물건 일정이 없어요.</p>';
-    $('l-up').innerHTML=up.length?up.slice(0,10).map(e=>evRow(e,true)).join(''):'<p class="empty">앞으로 14일 안에 일정이 없어요.<small>⭐ 관심 물건에 매각기일을 넣으면 여기에 나와요.</small></p>';
+    $('l-up').innerHTML=up.length?up.slice(0,8).map(e=>evRow(e,true)).join(''):'<p class="empty">다가오는 일정이 없어요.<small>⭐ 관심 물건에 매각기일을 넣으면 여기에 나와요.</small></p>';
   }
 
   // 🆕 — 빌라 페이지와 같은 기준: 80점↑ 인데 아직 확인 안 함 · 확인한 뒤 매각기일이 바뀜(🔁)
