@@ -1,0 +1,32 @@
+{
+  "id": "./today.html",
+  "name": "빌라 경매",
+  "short_name": "빌라 경매",
+  "description": "수도권 빌라 경매",
+  "start_url": "./today.html",
+  "scope": "./",
+  "lang": "ko",
+  "display": "standalone",
+  "background_color": "#f2f4f7",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "icon-villa-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-villa-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-villa-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
