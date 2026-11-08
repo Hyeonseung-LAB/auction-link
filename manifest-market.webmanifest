@@ -1,0 +1,32 @@
+{
+  "id": "./market.html",
+  "name": "시장 온도계",
+  "short_name": "시장 온도계",
+  "description": "서울·수도권 부동산 시장 흐름 — 실거래·전월세·급매",
+  "start_url": "./market.html",
+  "scope": "./market",
+  "lang": "ko",
+  "display": "standalone",
+  "background_color": "#f2f4f7",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "icon-market-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-market-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-market-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
