@@ -1224,17 +1224,18 @@ async function renderDeals(app){ noMap(); app.innerHTML='<div class="empty">불�
   if(!CKEY){ app.innerHTML=`<div class="head">${nav}</div><div class="card"><div class="empty">🔑 이 판은 두 번째 열쇠가 있는 기기에서만 보여요.</div></div>`; bindVtabs(app); return; }
   let rows=[]; try{ const s=await CDB.doc('notes/listings').get(); rows=(s.exists&&s.data().rows)||[]; }catch(e){}
   const cheap=rows.filter(x=>x.m==='🔥'||x.m==='🟢'), show=DEALF==='cheap'?cheap:rows, tm=t=>{ const m=/^\d{4}-(\d\d)-(\d\d)T(\d\d:\d\d)/.exec(t||''); return m?`${+m[1]}/${+m[2]} ${m[3]}`:''; };
-  app.innerHTML=`<div class="head">${nav}<div class="sub">${nw('알림 건 단지의 새 매물')} · ${nw('실거래보다 싼 순')}<br>${nw('최근 60일 '+rows.length+'건 · 싼 편 '+cheap.length+'건')}</div></div>
+  app.innerHTML=`<div class="head">${nav}<div class="sub">${nw('알림·직접 추린 매물')} · ${nw('실거래보다 싼 순')}<br>${nw('최근 60일 '+rows.length+'건 · 싼 편 '+cheap.length+'건')}</div></div>
     <div class="chips"><button class="chip ${DEALF==='all'?'on':''}" data-df="all">전체</button><button class="chip ${DEALF==='cheap'?'on':''}" data-df="cheap">🔥🟢 싼 편만</button></div>
     <div class="dgrid">${show.map(x=>{ const [c,u,j]=String(x.k).split('|'), g=SUM.regions.find(r=>r.c===c)||{n:''};
       return `<div class="card tap dl" data-dk="${esc(x.k)}" data-db="${x.b||''}"><div class="top"><div class="vd">${esc(x.m||'')} ${esc(x.v||'')}</div><div class="m">${nw(tm(x.t))}</div></div>
-        <div class="nm">${esc(x.n)}${x.d?' '+esc(x.d):''}</div><div class="m">${nw(esc(g.n+' '+u))}${x.ar?' · '+nw('전용 '+x.ar+'㎡'):''} · ${nw('층 모름')}</div>
+        <div class="nm">${esc(x.n)}${x.d?' '+esc(x.d):''}</div><div class="m">${nw(esc(g.n+' '+u))}${x.ar?' · '+nw('전용 '+x.ar+'㎡'):''} · ${nw(x.f?esc(x.f):'층 모름')}</div>
         <div class="pr">${man(x.a)}</div>
         ${x.ref?`<div class="m">${nw(esc(x.w||'최근')+' 중위 '+man(x.ref)+'('+x.rn+'건)보다 ')}${pctH(x.r)}</div>`:''}
         ${x.y!=null?`<div class="m">${nw('1년 '+x.y+'건 중 '+x.c+'건이 이보다 쌌어요')}</div>`:''}
-        <a class="nv" target="_blank" rel="noopener" href="https://m.land.naver.com/search/result/${encodeURIComponent(g.n+' '+u+' '+x.n)}">네이버 매물 →</a></div>`; }).join('')
+        ${x.kw?`<div class="m">${nw('🏷 '+esc(x.kw))}</div>`:''}
+        <a class="nv" target="_blank" rel="noopener" href="${x.ai?'https://fin.land.naver.com/articles/'+encodeURIComponent(x.ai):'https://m.land.naver.com/search/result/'+encodeURIComponent(g.n+' '+u+' '+x.n)}">${x.ai?'네이버 이 매물 →':'네이버 매물 →'}</a></div>`; }).join('')
       ||`<div class="card"><div class="empty">${rows.length?'지금은 싼 편으로 나온 매물이 없어요.':'아직 받은 매물이 없어요.<br>폰 알림 전달을 마치면 여기에 쌓여요.'}</div></div>`}</div>
-    <div class="foot">· 네이버 전체가 아니라 알림을 건 단지의 새 매물만 보여요.<br>· 호가를 직거래 뺀 최근 실거래 중위와 견줬어요.<br>· 알림 글에 층이 없어 모든 층과 견줘요.<br>· 저층이면 싸게, 고층이면 비싸게 보이지 않는지 확인이 필요해요.<br>· 싼 데는 이유가 있을 수 있어요(수리 상태·세입자·입주일).<br>· 호가는 우리 시트에만 있고 공개 파일엔 없어요.</div>`;
+    <div class="foot">· 네이버 전체가 아니라 알림을 건 단지의 새 매물과 직접 추려 넣은 매물만 보여요.<br>· 호가를 직거래 뺀 최근 실거래 중위와 견줬어요.<br>· 층과 상관없이 같은 면적 모든 층의 거래와 견줘요.<br>· 저층이면 싸게, 고층이면 비싸게 보이지 않는지 확인이 필요해요.<br>· 싼 데는 이유가 있을 수 있어요(수리 상태·세입자·입주일).<br>· 호가는 우리 시트에만 있고 공개 파일엔 없어요.</div>`;
   bindVtabs(app);
   app.querySelectorAll('[data-df]').forEach(b=>b.onclick=()=>{ DEALF=b.dataset.df; render(); });
   app.querySelectorAll('.dl a').forEach(a=>a.onclick=e=>e.stopPropagation());
