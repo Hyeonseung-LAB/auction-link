@@ -1218,14 +1218,19 @@ function askListHtml(list){ if(!list||!list.length) return '';
 
 // 🏷 매물 판(11/6 사장님 '경매처럼 체리피킹') — 알림 건 단지의 새 매물을 실거래와 견줘 싼 순으로. market_listings.py 가 시트 notes/listings(두 번째 열쇠로만 읽힘)에 올린다.
 //  공개 파일엔 호가가 없다. 판단 기준은 💬 judgeAsk 와 같고, 알림 글에 층이 없어 모든 층으로 본다.
-let DEALF='all';
+let DEALF='all', DEALN=200;   // 🏷 판: 처음 200장 · '더 보기'로 이어서(11/9 전부 보이게)
 async function renderDeals(app){ noMap(); app.innerHTML='<div class="empty">불러오는 중…</div>'; await loadCond();
   const nav=vtabs('deals');
   if(!CKEY){ app.innerHTML=`<div class="head">${nav}</div><div class="card"><div class="empty">🔑 이 판은 두 번째 열쇠가 있는 기기에서만 보여요.</div></div>`; bindVtabs(app); return; }
-  let rows=[]; try{ const s=await CDB.doc('notes/listings').get(); rows=(s.exists&&s.data().rows)||[]; }catch(e){}
-  const cheap=rows.filter(x=>x.m==='🔥'||x.m==='🟢'), show=DEALF==='cheap'?cheap:rows, tm=t=>{ const m=/^\d{4}-(\d\d)-(\d\d)T(\d\d:\d\d)/.exec(t||''); return m?`${+m[1]}/${+m[2]} ${m[3]}`:''; };
+  // 판은 여러 칸(notes/listings 첫 칸에 parts · listings_1 …)에 나눠 담겨 있다(11/9) — 다 모아 그린다
+  let rows=[]; try{ const s=await CDB.doc('notes/listings').get(); const d0=(s.exists&&s.data())||{}; rows=d0.rows||[];
+    const more=await Promise.all(Array.from({length:Math.max(0,(d0.parts||1)-1)},(_,i)=>CDB.doc('notes/listings_'+(i+1)).get().then(x=>(x.exists&&x.data().rows)||[]).catch(()=>[])));
+    rows=rows.concat(...more); }catch(e){}
+  const cheap=rows.filter(x=>x.m==='🔥'||x.m==='🟢'), mid=rows.filter(x=>x.m==='🔥'||x.m==='🟢'||x.v==='보통 값'),
+    all=DEALF==='cheap'?cheap:DEALF==='mid'?mid:rows, show=all.slice(0,DEALN),
+    tm=t=>{ const m=/^\d{4}-(\d\d)-(\d\d)(?:T(\d\d:\d\d))?/.exec(t||''); return m?`${+m[1]}/${+m[2]}${m[3]?' '+m[3]:''}`:''; };
   app.innerHTML=`<div class="head">${nav}<div class="sub">${nw('알림·직접 추린 매물')} · ${nw('실거래보다 싼 순')}<br>${nw('최근 60일 '+rows.length+'건 · 싼 편 '+cheap.length+'건')}</div></div>
-    <div class="chips"><button class="chip ${DEALF==='all'?'on':''}" data-df="all">전체</button><button class="chip ${DEALF==='cheap'?'on':''}" data-df="cheap">🔥🟢 싼 편만</button></div>
+    <div class="chips"><button class="chip ${DEALF==='all'?'on':''}" data-df="all">전체</button><button class="chip ${DEALF==='mid'?'on':''}" data-df="mid">⚪ 보통 이하</button><button class="chip ${DEALF==='cheap'?'on':''}" data-df="cheap">🔥🟢 싼 편만</button></div>
     <div class="dgrid">${show.map(x=>{ const [c,u,j]=String(x.k).split('|'), g=SUM.regions.find(r=>r.c===c)||{n:''};
       return `<div class="card tap dl" data-dk="${esc(x.k)}" data-db="${x.b||''}"><div class="top"><div class="vd">${esc(x.m||'')} ${esc(x.v||'')}</div><div class="m">${nw(tm(x.t))}</div></div>
         <div class="nm">${esc(x.n)}${x.d?' '+esc(x.d):''}</div><div class="m">${nw(esc(g.n+' '+u))}${x.ar?' · '+nw('전용 '+x.ar+'㎡'):''} · ${nw(x.f?esc(x.f):'층 모름')}</div>
@@ -1235,9 +1240,11 @@ async function renderDeals(app){ noMap(); app.innerHTML='<div class="empty">불�
         ${x.kw?`<div class="m">${nw('🏷 '+esc(x.kw))}</div>`:''}
         <a class="nv" target="_blank" rel="noopener" href="${x.ai?'https://fin.land.naver.com/articles/'+encodeURIComponent(x.ai):'https://m.land.naver.com/search/result/'+encodeURIComponent(g.n+' '+u+' '+x.n)}">${x.ai?'네이버 이 매물 →':'네이버 매물 →'}</a></div>`; }).join('')
       ||`<div class="card"><div class="empty">${rows.length?'지금은 싼 편으로 나온 매물이 없어요.':'아직 받은 매물이 없어요.<br>폰 알림 전달을 마치면 여기에 쌓여요.'}</div></div>`}</div>
+    ${all.length>show.length?`<div class="chips"><button class="chip" data-dmore>더 보기 · ${nw((all.length-show.length).toLocaleString()+'건 남음')}</button></div>`:''}
     <div class="foot">· 네이버 전체가 아니라 알림을 건 단지의 새 매물과 직접 추려 넣은 매물만 보여요.<br>· 호가를 직거래 뺀 최근 실거래 중위와 견줬어요.<br>· 층과 상관없이 같은 면적 모든 층의 거래와 견줘요.<br>· 저층이면 싸게, 고층이면 비싸게 보이지 않는지 확인이 필요해요.<br>· 싼 데는 이유가 있을 수 있어요(수리 상태·세입자·입주일).<br>· 호가는 우리 시트에만 있고 공개 파일엔 없어요.</div>`;
   bindVtabs(app);
-  app.querySelectorAll('[data-df]').forEach(b=>b.onclick=()=>{ DEALF=b.dataset.df; render(); });
+  app.querySelectorAll('[data-df]').forEach(b=>b.onclick=()=>{ DEALF=b.dataset.df; DEALN=200; render(); });
+  app.querySelectorAll('[data-dmore]').forEach(b=>b.onclick=()=>{ DEALN+=300; const y=scrollY; render().then(()=>scrollTo(0,y)); });
   app.querySelectorAll('.dl a').forEach(a=>a.onclick=e=>e.stopPropagation());
   app.querySelectorAll('[data-dk]').forEach(el=>el.onclick=()=>{ const [c,u,j]=el.dataset.dk.split('|'); go({v:null, r:c, d:u, x:j, a:el.dataset.db||null}); }); }
 
