@@ -678,6 +678,7 @@ function weekRegion(code){
 // ── 🏠 내 집 후보(11/2 3단계) ────────────────────────────────
 // 조건(예산·근무지·거리…)은 구글 시트 notes/home-conditions 에만. 공개 파일(homes.json)엔 시장 숫자만 있다.
 let HOMES=null, COND=null, CDB=null, csave=null, CKEY=false, CBASE=null, cq=Promise.resolve();
+let LONG=null;                                  // 📅 길게 보기(11/12) — 시트 notes/home-long(봇이 시트 조건으로 계산, 열쇠 있는 기기만)
 // 🔑 두 번째 열쇠(11/2) — 조건은 개인 값이라 열쇠 있는 기기만 읽힌다. 열쇠 없는 기기는 시트에 안 쓴다(못 읽은 걸 빈 값으로 덮어쓰지 않게)
 const canSave=()=>{ const S=window.SheetDB; return !!S&&(S.MOCK||(typeof S.hasKey==='function'?S.hasKey():true)); };   // 옛 sheetdb.js(열쇠 없던 판)면 예전처럼
 const HB={59:9, 84:10};                       // homes.json 줄에서 평형대 칸 위치
@@ -686,7 +687,8 @@ function km(a,b){ const R=6371, t=x=>x*Math.PI/180, dl=t(b[1]-a[1]), dn=t(b[0]-a
 const walkMin = m => m==null?null:Math.max(1,Math.round(m*1.3/67));   // 직선거리 → 도보 분(어림)
 async function loadCond(){
   if(COND===null){
-    try{ CDB=await SheetDB.use(); CKEY=!!CDB&&canSave(); const s=CDB?await CDB.doc('notes/home-conditions').get():null; COND=(s&&s.exists)?(s.data()||{}):{}; }
+    try{ CDB=await SheetDB.use(); CKEY=!!CDB&&canSave(); const s=CDB?await CDB.doc('notes/home-conditions').get():null; COND=(s&&s.exists)?(s.data()||{}):{};
+      const l=CDB?await CDB.doc('notes/home-long').get():null; LONG=(l&&l.exists&&l.data()&&(l.data().plans||[]).length)?l.data():null; }
     catch(e){ COND={}; }
     CBASE=JSON.parse(JSON.stringify(COND));
   }
@@ -850,6 +852,38 @@ function bindNameSearch(root){ const q=root.querySelector('#nsq'), box=root.quer
   q.onfocus=()=>{ if(isMob()) setSheet(.84); loadNames().catch(()=>{}); }; }
 function bindVtabs(root){ bindNameSearch(root); root.querySelectorAll('[data-help]').forEach(b=>b.onclick=openHelp); root.querySelectorAll('[data-vt]').forEach(b=>b.onclick=()=>{ if(b.classList.contains('on')) return;
   go({v:b.dataset.vt==='list'?null:b.dataset.vt, r:null, d:null, x:null, a:null}); }); }
+// 📅 길게 보기(11/12 사장님 '15억 내 집 후보 길게 보기') — 2021년부터 달마다 '그 반경에서 예산 이하였던 단지 비율'.
+//  봇(market_long.py)이 시트 조건으로 세어 notes/home-long 에 올린다 — 예산·근무지는 공개 파일에 없다.
+//  조건을 바꾸면 다음 날 09:30 에 다시 센다(그 전엔 '조건이 바뀌었어요' 표시).
+const ymSeq=(a,b)=>{ const o=[]; let y=+a.slice(0,4), m=+a.slice(4); for(;;){ const k=`${y}${String(m).padStart(2,'0')}`; if(k>b) break; o.push(k); if(++m>12){ m=1; y++; } } return o; };
+const LCOL={59:'#2a78d6', 84:'#e34948'};
+function longPlan(c){ if(!LONG||!c.plans) return null; const i=c.plan||0, p=(LONG.plans||[])[i]; return p&&c.plans[i]&&p.name===c.plans[i].name?p:null; }
+function longStale(c, p){ const P=c.plans[c.plan||0]||{}, eq=(a,b)=>(a??null)===(b??null);
+  return !eq(LONG.budget,c.budget)||(LONG.band||'both')!==(c.band||'both')||!eq(LONG.walk,c.walk)||!eq(LONG.age,c.age)||(LONG.minN||0)!==(c.minN||0)||p.km!==(P.km||10); }
+function longRow(r, x){ const [sgg,u,j,name,bd]=r;
+  return `<div class="row" data-h="${sgg}|${esc(u)}|${esc(j)}|${bd}"><div class="a"><div class="n">${esc(name)}</div><div class="m">${nw(esc(u))}${x}</div></div>`; }
+function longCard(c){ const p=longPlan(c); if(!p) return '';
+  const now=Object.entries(p.s).map(([b,s])=>{ const [a,n]=s[s.length-1]; return n?nw(`${b}㎡대 ${a.toLocaleString()}곳 / ${n.toLocaleString()}곳 (${Math.round(a/n*100)}%)`):''; }).filter(Boolean).join('<br>');
+  return `<div class="lab">📅 길게 보기 · ${nw(man(LONG.budget)+' 이하 단지 비율')} · ${esc(p.name)} ${p.km}km</div>
+    <div class="card" id="hlc"><div class="m" style="padding:12px 14px 0">${nw(ymK(LONG.last)+' 계약분까지')}<br>${now}</div><div id="hlong" style="padding:0 6px"></div>
+      <div class="legend" style="padding:0 14px 8px">${Object.keys(p.s).map(b=>`<span><i style="background:${LCOL[b]}"></i>${b}㎡대</span>`).join('')}</div>
+      ${longStale(c,p)?'<div class="saved">조건이 바뀌었어요<br>내일 09:30에 새 조건으로 다시 세요 — 그때까지는 예전 조건 그래프예요</div>':''}
+      <div class="m" style="padding:0 14px 6px">${nw('지난달보다 새로 예산 넘음 '+p.nu+'곳')} · ${nw('새로 예산 안 '+p.nd+'곳')}</div>
+      ${p.up.length||p.down.length?`<button class="more" data-lt="chg">새로 넘음·들어옴 보기</button><div id="hlchg"></div>`:''}
+      ${p.near.length?`<button class="more" data-lt="near">예산선 근처(±15%) ${p.nn.toLocaleString()}곳 보기</button><div id="hlnear"></div>`:''}
+      <div class="foot">· 비율 = 그달까지 12개월 중개거래가 있던 단지 중 예산 이하인 단지예요.<br>· 값 = 그달까지 12개월 중개거래 중위(직거래 빼고)라 아래 목록과 같은 셈이에요.<br>· 근무지 반경·평형·역까지 걸어서·연식·1년 거래 조건을 똑같이 써요.<br>· 출퇴근(지하철)·버스 조건은 빼고 세요.<br>· 단지가 10곳 안 되는 달은 그리지 않아요.<br>· 새 달 자료가 다 찬 날, 그리고 조건을 바꾼 다음 날 09:30에 다시 세요.<br>· 예산선 근처 목록은 1년 거래 3건 이상인 단지만, 예산에 가까운 순이에요.</div></div>`; }
+function drawLong(app, c){ const p=longPlan(c), el=app.querySelector('#hlong'); if(!p||!el) return;
+  const xs=ymSeq(LONG.from, LONG.last), S=Object.entries(p.s).map(([b,s])=>({name:b+'㎡대', color:LCOL[b], raw:s, ys:s.map(([a,n])=>n>=10?a/n*100:null)}));
+  multiLine(el, xs, S, {base:null, floor:0, unit:'%', h:170, tip:i=>`<b>${ymK(xs[i])}</b>`+S.map(x=>{ const [a,n]=x.raw[i]||[0,0];
+    return n?`<br><span style="color:${x.color}">●</span> ${x.name} ${Math.round(a/n*100)}% (${a.toLocaleString()}/${n.toLocaleString()}곳)`:''; }).join('')});
+  const go2=box=>box.querySelectorAll('[data-h]').forEach(r=>r.onclick=()=>{ const [sgg,u,j,bd]=r.dataset.h.split('|'); go({v:null, r:sgg, d:u, x:j, a:bd}); });
+  app.querySelectorAll('[data-lt]').forEach(bt=>bt.onclick=()=>{ const k=bt.dataset.lt, box=app.querySelector(k==='near'?'#hlnear':'#hlchg'); bt.remove();
+    if(k==='near') box.innerHTML=p.near.map(r=>longRow(r, ` · ${nw(r[9]+'km')} · ${nw('1년 '+r[8]+'건')}`)
+      +`<div class="b"><div class="p">${nw(r[4]+'㎡대 '+man(r[5]))}</div>${r[6]?`<div class="m">${nw('1년 전 '+man(r[6])+' ')}${pctH(r[5]/r[6]-1,0)}</div>`:''}<div class="m">${nw('최고 '+man(r[7]))}</div></div></div>`).join('')
+      +(p.nn>p.near.length?`<div class="lab">${p.nn.toLocaleString()}곳 중 예산에 가까운 ${p.near.length}곳까지 보여요</div>`:'');
+    else box.innerHTML=[['up','⬆ 새로 예산 넘음',p.nu],['down','⬇ 새로 예산 안',p.nd]].filter(([q])=>p[q].length).map(([q,t,n])=>`<div class="lab">${t} ${n}곳${n>p[q].length?` · 거래 많은 ${p[q].length}곳까지`:''}</div>`
+      +p[q].map(r=>longRow(r, ` · ${nw('1년 '+r[7]+'건')}`)+`<div class="b"><div class="p">${nw(r[4]+'㎡대 '+man(r[6]))}</div><div class="m">${nw('지난달 '+man(r[5]))}</div></div></div>`).join('')).join('');
+    go2(box); }); }
 async function renderHome(app){
   app.innerHTML='<div class="empty">불러오는 중…</div>';
   await loadHome();
@@ -885,6 +919,7 @@ async function renderHome(app){
     </div><div class="saved" id="csaved">${CKEY?'':'🔑 이 기기엔 두 번째 열쇠가 없어요<br>바꾼 조건은 이 화면에서만 쓰고 저장 안 돼요'}</div></div>
     ${(c.watch&&c.watch.length)?`<div class="lab">⭐ 관심 단지 ${c.watch.length}곳 · 새 실거래가 신고되면 개인 채팅으로</div><div class="card">${c.watch.map(w=>{ const u=String(w.k||'').split('|')[1]||'';
       return `<div class="row" data-wk="${esc(w.k)}"><div class="a"><div class="n">⭐ ${esc(w.n||'')}</div><div class="m">${nw(esc((w.g?w.g+' ':'')+u))}</div></div><div class="b"><div class="m">${nw('단지 보기 →')}</div></div></div>`; }).join('')}</div>`:''}
+    ${longCard(c)}
     <div class="lab">후보 ${rows.length.toLocaleString()}곳 · ${esc(P0.name)}</div>
     <div class="chips">${[['dist','가까운 순'],['cheap','싼 순'],['deal','거래 많은 순'],['new','새 아파트 순'],['drop','최고가보다 많이 내린 순'],...(CTOK?[['time','출퇴근 빠른 순']]:[])].map(([k,t])=>`<button class="chip ${(c.sort||'dist')===k?'on':''}" data-sort="${k}">${t}</button>`).join('')}</div>
     <div class="card">${show.map(x=>{ const r=x.r, b=x.b, dr=b[0]/b[2]-1;
@@ -897,6 +932,7 @@ async function renderHome(app){
       ${rows.length>show.length?`<button class="more" id="more">${(rows.length-show.length).toLocaleString()}곳 더 보기</button>`:''}</div>
     <div class="foot">· 값은 최근 12개월 중개거래 중위가예요(직거래 빼고).<br>· 역까지 걸어서 = 가까운 지하철역 직선거리로 어림한 값(추정)이에요.<br>· 버스도 가까운 정류장 직선거리로 어림해요.<br>· 경기 단지 버스는 하루 1,000곳씩 채우는 중이라 '확인 중'이 보일 수 있어요.<br>· 인천은 버스 자료가 없어요.<br>· 조건은 우리 구글 시트에만 저장돼요.<br>· 조건은 두 번째 열쇠가 있는 기기에서만 보이고 저장돼요.<br>· 지도 바탕은 오픈스트리트맵이에요(근무지는 이 화면에서만 그려요).${!SUBW?'':(CTOK?'':'<br>· 이 근무지는 1.2km 안에 역이 없어 지하철 출퇴근 시간을 안 셌어요.')+'<br>· 🕒 출퇴근 = 지하철만 어림한 값(추정)이에요.<br>· 걸어서 역까지 + 기다림 3분 + 역 사이 + 갈아타기 5분(GTX 8분) + 내려서 걸어서로 셌어요.<br>· 역 사이 시간은 거리로 어림했고 급행·버스는 안 셌어요.<br>· 역 순서 자료: © OpenStreetMap 기여자'}</div>`;
   bindVtabs(app);
+  drawLong(app, c);
   app.querySelectorAll('[data-plan]').forEach(b=>b.onclick=()=>{ c.plan=+b.dataset.plan; saveCond(); render(); });
   app.querySelectorAll('[data-sort]').forEach(b=>b.onclick=()=>{ c.sort=b.dataset.sort; saveCond(); render(); });
   app.querySelectorAll('[data-c]').forEach(sel=>sel.onchange=()=>{ const k=sel.dataset.c, v=sel.value;
