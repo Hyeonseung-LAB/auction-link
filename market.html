@@ -679,6 +679,7 @@ function weekRegion(code){
 // 조건(예산·근무지·거리…)은 구글 시트 notes/home-conditions 에만. 공개 파일(homes.json)엔 시장 숫자만 있다.
 let HOMES=null, COND=null, CDB=null, csave=null, CKEY=false, CBASE=null, cq=Promise.resolve();
 let LONG=null;                                  // 📅 길게 보기(11/12) — 시트 notes/home-long(봇이 시트 조건으로 계산, 열쇠 있는 기기만)
+let COMM=null;                                  // 🚌🚇 실제로 탈 길(11/13) — 시트 notes/home-commute(+_1…, 봇 market_commute 계산, 열쇠 있는 기기만)
 // 🔑 두 번째 열쇠(11/2) — 조건은 개인 값이라 열쇠 있는 기기만 읽힌다. 열쇠 없는 기기는 시트에 안 쓴다(못 읽은 걸 빈 값으로 덮어쓰지 않게)
 const canSave=()=>{ const S=window.SheetDB; return !!S&&(S.MOCK||(typeof S.hasKey==='function'?S.hasKey():true)); };   // 옛 sheetdb.js(열쇠 없던 판)면 예전처럼
 const HB={59:9, 84:10};                       // homes.json 줄에서 평형대 칸 위치
@@ -688,7 +689,10 @@ const walkMin = m => m==null?null:Math.max(1,Math.round(m*1.3/67));   // 직선�
 async function loadCond(){
   if(COND===null){
     try{ CDB=await SheetDB.use(); CKEY=!!CDB&&canSave(); const s=CDB?await CDB.doc('notes/home-conditions').get():null; COND=(s&&s.exists)?(s.data()||{}):{};
-      const l=CDB?await CDB.doc('notes/home-long').get():null; LONG=(l&&l.exists&&l.data()&&(l.data().plans||[]).length)?l.data():null; }
+      const l=CDB?await CDB.doc('notes/home-long').get():null; LONG=(l&&l.exists&&l.data()&&(l.data().plans||[]).length)?l.data():null;
+      const h=CDB?await CDB.doc('notes/home-commute').get():null, hd=h&&h.exists&&h.data();
+      if(hd&&(hd.plans||[]).length){ const more=await Promise.all(Array.from({length:Math.max(0,(hd.parts||1)-1)},(_,i)=>CDB.doc('notes/home-commute_'+(i+1)).get().then(x=>(x.exists&&x.data().r)||{}).catch(()=>({}))));
+        hd.plans.forEach((p,i)=>{ p.r={}; for(const m of more) Object.assign(p.r, m[String(i)]||{}); }); COMM=hd; } }
     catch(e){ COND={}; }
     CBASE=JSON.parse(JSON.stringify(COND));
   }
@@ -797,18 +801,23 @@ function directOf(r, plan){            // → {t 분, ln 노선('' = 근무지�
   return best&&{...best, t:Math.round(best.t)};
 }
 // 🚏 내려서 집까지(11/12 — 지금 집은 언덕에 내려서 7분) — 가까운 지하철역·버스 정류장 중 덜 힘든 쪽.
-//  체감 분 = 걸어서(직선×1.3, 분당 67m) + 오르막 10m 마다 1분(등산 어림 '나이스미스 규칙'). r[13~15] = market_terrain(지형 타일 어림)
-function doorOf(r){ const c=[];
-  if(r[8]!=null) c.push(['🚇', walkM(r[8])+(r[14]||0)/10, r[14]]);
-  if(r[12]!=null&&r[12]>=0) c.push(['🚌', walkM(r[12])+(r[15]||0)/10, r[15]]);
+//  걷는 분만 본다 — 오르막은 안 더함(11/13: 지형 타일이 큰 건물을 지형으로 잡아 평지도 15~25m씩 오르내림)
+function doorOf(r){ const c=[];             // 봇 계산이 없을 때만 — 가까운 역·정류장 직선×1.3(경매 geo.py 폴백과 같음)
+  if(r[8]!=null) c.push(['🚇', walkM(r[8])]);
+  if(r[12]!=null&&r[12]>=0) c.push(['🚌', walkM(r[12])]);
   if(!c.length) return null; c.sort((a,b)=>a[1]-b[1]);
-  return {by:c[0][0], t:Math.max(1,Math.round(c[0][1])), up:c[0][2]}; }
+  return {by:c[0][0], t:Math.max(1,Math.round(c[0][1])), est:true}; }
+// 🚌🚇 실제로 탈 길(11/13 현승 "실제로 회사를 다닌다고 생각하고") — 봇이 단지마다 갈아타지 않는 길(지하철·버스·걸어서) 중
+//  가장 빠른 길을 고르고, 내려서 집까지는 그 역·정류장에서 티맵(실제 걷는 길, 경매 세션과 같은 방식)으로 잼
+function commPlan(c){ if(!COMM||!c.plans) return null; const P=c.plans[c.plan||0]; return P?(COMM.plans.find(p=>p.name===P.name)||null):null; }
+function realOf(r, cp){ const e=cp&&cp.r[r[0]+'|'+r[1]+'|'+r[2]]; if(!e) return null;
+  return {mode:e[0], by:e[0]==='b'?'🚌':e[0]==='s'?'🚇':'🚶', line:cp.L[e[1]]||'', stop:cp.S[e[2]]||'', door:e[3], t:e[4], tm:!!e[5]}; }
 let FLATMED=null;                      // 서울 단지 '주변 높이 차' 중간값(견주기 줄)
 function flatMed(){ if(FLATMED===null){ const v=HOMES.rows.filter(r=>r[0].startsWith('11')&&r[13]!=null).map(r=>r[13]).sort((a,b)=>a-b); FLATMED=v.length?v[v.length>>1]:0; } return FLATMED; }
 function homeRows(){
   const c=COND, plan=(c.plans||[])[c.plan||0]; if(!plan) return [];
   const pts=(plan.pts||[]).map(p=>[p.lng,p.lat,p.n]), out=[], yr=new Date().getFullYear();
-  const CTOK0=!!commuteTable(plan), DOK=!!directTable(plan);
+  const CTOK0=!!commuteTable(plan), DOK=!!directTable(plan), cp=commPlan(c);
   const bands=c.band==='59'?[59]:c.band==='84'?[84]:[59,84];
   for(const r of HOMES.rows){
     let best=null; for(const p of pts){ const d=km([r[4],r[5]],p); if(!best||d<best[0]) best=[d,p[2]]; }
@@ -817,14 +826,19 @@ function homeRows(){
     // 버스: r[12] = 정류장 직선 m(-1 = 물어봤는데 가까이 없음, null = 아직 못 물음·인천) — 못 물은 곳은 거르지 않는다
     const bw=r[12]==null?null:(r[12]<0?99:walkMin(r[12])); if(c.bwalk&&bw!=null&&bw>c.bwalk) continue;
     if(c.flat&&r[13]!=null&&r[13]>c.flat) continue;      // ⛰ 못 잰 곳(거의 없음)은 거르지 않는다
-    const dr=doorOf(r); if(c.door&&(dr==null||dr.t>c.door)) continue;
+    const rl=cp?realOf(r, cp):null;              // 봇이 고른 실제로 탈 길(없으면 갈아타지 않는 길이 없거나 아직 안 셈)
+    const dr=rl?(rl.mode==='w'?{t:0, walk:true}:{t:rl.door, by:rl.by, stop:rl.stop, est:!rl.tm}):doorOf(r);
+    if(c.door&&(dr==null||dr.t>c.door)) continue;
     if(c.age&&r[6]&&yr-r[6]>c.age) continue;
-    // 🚇 갈아타기 0번이면 출퇴근 시간도 그 길로 — 근무지 가까이 역이 없으면(셔틀·차) 두 조건 다 안 거른다
-    const dx=(c.direct&&DOK)?directOf(r, plan):null; if(c.direct&&DOK&&!dx) continue;
-    const ct=dx?dx.t:commuteOf(r, plan); if(c.commute&&CTOK0&&(ct==null||ct>c.commute)) continue;
+    // 🚇 갈아타기 0번 — 봇 계산이 있으면 버스·지하철·걸어서 다 봄, 없으면 지하철만(근무지 가까이 역이 없으면 안 거름)
+    let dx=null;
+    if(c.direct&&cp){ if(!rl) continue; dx={t:rl.t, ln:rl.line, by:rl.by, mode:rl.mode}; }
+    else if(c.direct&&DOK){ dx=directOf(r, plan); if(!dx) continue; dx.by=dx.ln?'🚇':'🚶'; }
+    const ca=commuteOf(r, plan), ct=dx?dx.t:(rl&&ca!=null?Math.min(rl.t,ca):rl?rl.t:ca);
+    if(c.commute&&(CTOK0||cp)&&(ct==null||ct>c.commute)) continue;
     for(const bd of bands){ const b=r[HB[bd]]; if(!b||!b[0]) continue;
       if(c.budget&&b[0]>c.budget) continue; if((c.minN||0)>b[1]) continue;
-      out.push({r, bd, b, dist:best[0], to:best[1], w, bw, ct, dr, dx}); }
+      out.push({r, bd, b, dist:best[0], to:best[1], w, bw, ct, dr, dx, rl}); }
   }
   const k=c.sort||'dist', f={dist:x=>x.dist, cheap:x=>x.b[0], deal:x=>-x.b[1], new:x=>-(x.r[6]||0), drop:x=>x.b[0]/x.b[2], time:x=>x.ct??999,
     flat:x=>x.r[13]??999, door:x=>x.dr?x.dr.t:999}[k]||(x=>x.dist);
@@ -855,9 +869,9 @@ const HELP=[
     '🕒 출퇴근 = 지하철만 어림했어요(기다림 3분·갈아타기 5분, 버스는 안 셈).',
     '⛰ 주변 높이 차 = 단지 둘레 150m 안 높낮이 차이예요.',
     '높이 차가 작을수록 평지예요.',
-    '🚏 내려서 집까지 = 가까운 역·정류장에서 걸어서 + 오르막 10m마다 1분으로 어림했어요.',
-    '🚇 갈아타기 0번 = 지하철 한 노선으로 근무지 근처 역까지 가는 단지만 남겨요.',
-    '버스 직통은 아직 자료가 없어 안 봐요.',
+    '🚌🚇 환승 없이 = 갈아타지 않고 회사까지 가는 길 중 가장 빠른 길이에요(지하철·버스·걸어서).',
+    '🚏 내려서 집까지 = 그 길의 역·정류장에서 티맵 실제 걷는 길로 잰 시간이에요.',
+    '🚇 갈아타기 0번 = 갈아타지 않고 가는 길이 있는 단지만 남겨요.',
     '⭐ 관심 단지는 목록과 지도 ⭐로 보여요.',
     '매일 09:30 개인 채팅: 후보 단지 경매 알림, 관심 단지 새 실거래 알림.',
     '🏷 매물 = 폰 알림으로 받은 네이버 새 매물을 실거래보다 싼 순으로 보여 줘요(열쇠 있는 기기만).']],
@@ -981,12 +995,13 @@ async function renderHome(app){
       return `<div class="row" data-h="${r[0]}|${esc(r[1])}|${esc(r[2])}|${x.bd}"><div class="a"><div class="n">${esc(r[3])}</div>
         <div class="m">${nw(esc(r[1]))}${r[6]?' · '+nw(r[6]+'년'):''}${r[7]?' · '+nw('🚇 '+esc(r[7].replace(/ .*$/,''))+' 약 '+x.w+'분'):''}</div>
         <div class="m">${r[11]?nw('🚌 '+esc(r[11])+' 약 '+x.bw+'분'):(r[12]===-1?nw('🚌 가까운 정류장 없음'):(r[0].startsWith('28')?'':nw('🚌 확인 중')))}</div>
-        ${r[13]!=null||x.dr?`<div class="m">${r[13]!=null?nw('⛰ 높이 차 '+r[13]+'m'):''}${r[13]!=null&&x.dr?' · ':''}${x.dr?nw('🚏 내려서 약 '+x.dr.t+'분'+(x.dr.up?'(오르막 '+x.dr.up+'m)':'')):''}</div>`:''}
+        ${x.rl?`<div class="m">${nw(x.rl.mode==='w'?'🚶 회사까지 걸어서 약 '+x.rl.t+'분':x.rl.by+' '+esc(x.rl.line)+' 환승 없이 약 '+x.rl.t+'분')}</div>`:''}
+        ${r[13]!=null||x.dr?`<div class="m">${r[13]!=null?nw('⛰ 높이 차 '+r[13]+'m'):''}${r[13]!=null&&x.dr&&!x.dr.walk?' · ':''}${x.dr&&!x.dr.walk?nw('🚏 '+(x.dr.stop?esc(x.dr.stop)+'에서 ':'')+'내려 '+(x.dr.est?'약 ':'')+x.dr.t+'분'+(x.dr.est&&!x.rl?'(가까운 곳 어림)':'')):''}</div>`:''}
         ${aucOf(r[0]+'|'+r[1]+'|'+r[2]).length?`<div class="m">${nw('🔨 지금 경매 중 '+aucOf(r[0]+'|'+r[1]+'|'+r[2]).length+'건')}</div>`:''}
-        <div class="m">${nw('🏢 '+esc(x.to)+' '+x.dist.toFixed(1)+'km')}${x.dx?' · '+nw(x.dx.ln?'🚇 환승 없이 '+x.dx.ln+' 약 '+x.dx.t+'분':'🚶 걸어서 약 '+x.dx.t+'분'):x.ct!=null?' · '+nw('🕒 약 '+x.ct+'분'):''}${b[3]?' · '+nw('전세가율 '+b[3]+'%'):''}</div></div>
+        <div class="m">${nw('🏢 '+esc(x.to)+' '+x.dist.toFixed(1)+'km')}${x.rl?'':x.dx?' · '+nw(x.dx.ln?'🚇 환승 없이 '+x.dx.ln+' 약 '+x.dx.t+'분':'🚶 걸어서 약 '+x.dx.t+'분'):x.ct!=null?' · '+nw('🕒 약 '+x.ct+'분'):''}${b[3]?' · '+nw('전세가율 '+b[3]+'%'):''}</div></div>
         <div class="b"><div class="p">${nw(x.bd+'㎡대 '+man(b[0]))}</div><div class="m">${nw('1년 '+b[1]+'건')}</div><div class="m">${nw('최고가 대비 ')}${pctH(dr,0)}</div></div></div>`; }).join('')||'<div class="empty">조건에 맞는 단지가 없어요.<br>조건을 넓혀 보세요.</div>'}
       ${rows.length>show.length?`<button class="more" id="more">${(rows.length-show.length).toLocaleString()}곳 더 보기</button>`:''}</div>
-    <div class="foot">· 값은 최근 12개월 중개거래 중위가예요(직거래 빼고).<br>· 역까지 걸어서 = 가까운 지하철역 직선거리로 어림한 값(추정)이에요.<br>· 버스도 가까운 정류장 직선거리로 어림해요.<br>· ⛰ 주변 높이 차 = 단지 점과 150m 둘레 8곳 중 가장 높은 곳과 낮은 곳의 차이예요.<br>· 🚏 내려서 집까지 = 가까운 역·정류장 중 덜 힘든 쪽이에요.<br>· 걸어서 + 오르막 10m마다 1분으로 어림했어요(추정).<br>· 높이는 공개 지형 자료(약 30m 격자)로 잰 어림이에요.<br>· 큰 단지는 주소 한 점으로 재서 동마다 다를 수 있어요 — 언덕 단지는 높이 차를 같이 보세요.<br>· 경기 단지 버스는 하루 1,000곳씩 채우는 중이라 '확인 중'이 보일 수 있어요.<br>· 인천은 버스 자료가 없어요.<br>· 조건은 우리 구글 시트에만 저장돼요.<br>· 조건은 두 번째 열쇠가 있는 기기에서만 보이고 저장돼요.<br>· 지도 바탕은 오픈스트리트맵이에요(근무지는 이 화면에서만 그려요).${!SUBW?'':(CTOK?'':'<br>· 이 근무지는 1.2km 안에 역이 없어 지하철 출퇴근 시간을 안 셌어요.')+'<br>· 🚇 갈아타기 0번 = 지하철 한 노선만 타고 근무지 근처 역까지 가는 길이에요.<br>· 같은 이름 노선 안의 갈아타기(2호선 지선·1호선 갈래)는 못 가려요.<br>· 버스 직통은 아직 자료가 없어 안 봐요.<br>· 🕒 출퇴근 = 지하철만 어림한 값(추정)이에요.<br>· 걸어서 역까지 + 기다림 3분 + 역 사이 + 갈아타기 5분(GTX 8분) + 내려서 걸어서로 셌어요.<br>· 역 사이 시간은 거리로 어림했고 급행·버스는 안 셌어요.<br>· 역 순서 자료: © OpenStreetMap 기여자'}</div>`;
+    <div class="foot">· 값은 최근 12개월 중개거래 중위가예요(직거래 빼고).<br>· 역까지 걸어서 = 가까운 지하철역 직선거리로 어림한 값(추정)이에요.<br>· 버스도 가까운 정류장 직선거리로 어림해요.<br>· ⛰ 주변 높이 차 = 단지 점과 150m 둘레 8곳 중 가장 높은 곳과 낮은 곳의 차이예요.<br>· 🚌🚇 환승 없이 = 갈아타지 않고 회사까지 가는 길(지하철 한 노선·버스 한 노선·걸어서) 중 가장 빠른 길이에요.<br>· 버스 시간은 정류장 사이 거리로 어림했어요(막힘·급행은 안 봄).<br>· 🚏 내려서 집까지 = 그 길의 역·정류장에서 티맵 실제 걷는 길로 잰 시간이에요(경매 페이지와 같은 방식).<br>· 아직 티맵으로 못 잰 곳은 '약'을 붙인 직선 어림이에요(하루에 조금씩 채워요).<br>· 높이는 공개 지형 자료(약 30m 격자)로 잰 어림이에요.<br>· 큰 단지는 주소 한 점으로 재서 동마다 다를 수 있어요 — 언덕 단지는 높이 차를 같이 보세요.<br>· 경기 단지 버스는 하루 1,000곳씩 채우는 중이라 '확인 중'이 보일 수 있어요.<br>· 인천은 버스 자료가 없어요.<br>· 조건은 우리 구글 시트에만 저장돼요.<br>· 조건은 두 번째 열쇠가 있는 기기에서만 보이고 저장돼요.<br>· 지도 바탕은 오픈스트리트맵이에요(근무지는 이 화면에서만 그려요).${!SUBW?'':(CTOK?'':'<br>· 이 근무지는 1.2km 안에 역이 없어 지하철 출퇴근 시간을 안 셌어요.')+'<br>· 🚇 갈아타기 0번 = 갈아타지 않고 가는 길(지하철·버스·걸어서)이 있는 단지만 남겨요.'+(commPlan(c)&&commPlan(c).bus?'':'<br>· 이 근무지는 아직 버스 노선 자료가 없어 지하철만 봐요.')+'<br>· 같은 이름 노선 안의 갈아타기(2호선 지선·1호선 갈래)는 못 가려요.<br>· 🕒 출퇴근 = 지하철만 어림한 값(추정)이에요.<br>· 걸어서 역까지 + 기다림 3분 + 역 사이 + 갈아타기 5분(GTX 8분) + 내려서 걸어서로 셌어요.<br>· 역 사이 시간은 거리로 어림했고 급행·버스는 안 셌어요.<br>· 역 순서 자료: © OpenStreetMap 기여자'}</div>`;
   bindVtabs(app);
   drawLong(app, c);
   app.querySelectorAll('[data-plan]').forEach(b=>b.onclick=()=>{ c.plan=+b.dataset.plan; saveCond(); render(); });
@@ -1111,8 +1126,9 @@ function homeMap(rows, plan){
       const gn=(SUM.regions.find(g=>g.c===r[0])||{}).n||'';
       const html=`<div class="hpop"><b>${esc(r[3])}</b><br>${esc(r[1])}${r[6]?' · '+r[6]+'년':''}`
         +`${r[7]?'<br>🚇 '+esc(r[7].replace(/ .*$/,''))+' 약 '+x0.w+'분':''}${r[11]?'<br>🚌 '+esc(r[11])+' 약 '+x0.bw+'분':''}`
-        +`${r[13]!=null?'<br>⛰ 높이 차 '+r[13]+'m':''}${x0.dr?' · 🚏 내려서 약 '+x0.dr.t+'분':''}`
-        +`<br>🏢 ${esc(x0.to)} ${x0.dist.toFixed(1)}km${x0.dx&&x0.dx.ln?` · 🚇 환승 없이 ${x0.dx.ln} 약 ${x0.dx.t}분`:x0.ct!=null?` · 🕒 약 ${x0.ct}분`:''}<br>${lines}`
+        +`${x0.rl?'<br>'+(x0.rl.mode==='w'?'🚶 회사까지 걸어서 약 '+x0.rl.t+'분':x0.rl.by+' '+esc(x0.rl.line)+' 환승 없이 약 '+x0.rl.t+'분'):''}`
+        +`${r[13]!=null?'<br>⛰ 높이 차 '+r[13]+'m':''}${x0.dr&&!x0.dr.walk?' · 🚏 내려 '+x0.dr.t+'분':''}`
+        +`<br>🏢 ${esc(x0.to)} ${x0.dist.toFixed(1)}km${x0.rl?'':x0.dx&&x0.dx.ln?` · 🚇 환승 없이 ${x0.dx.ln} 약 ${x0.dx.t}분`:x0.ct!=null?` · 🕒 약 ${x0.ct}분`:''}<br>${lines}`
         +`<br><a href="#" class="go" data-go="${r[0]}|${esc(r[1])}|${esc(r[2])}|${x0.bd}">단지 보기 →</a>`
         +` <a href="#" class="go" data-nm="${NMAP(gn+' '+r[1]+' '+r[3])}">네이버 지도 →</a></div>`;
       L.circleMarker([r[5],r[4]],{radius:cs.length>300?5:6.5, color:'#fff', weight:1.5, fillColor:COL[tier(c.p)], fillOpacity:.92}).bindPopup(html)
