@@ -2,7 +2,7 @@
  *
  * 입찰기록(bids)은 📝 입찰 페이지·📌 오늘 ✅ 넣었음·Claude 가 적고, 캘린더는 관심물건(items)만 그린다.
  * 그래서 입찰을 적어도 캘린더에 안 나왔다. 입찰·캘린더·오늘 화면이 열릴 때(그리고 입찰을 적은 뒤) BidSync.sync(db) 로 맞춘다.
- *  · 결과를 기다리는 입찰(대기 · 매각기일이 사흘 전 이후)마다
+ *  · 결과를 기다리는 입찰(대기 · 매각기일이 사흘 전 이후)과 낙찰된 입찰(넉 달 안 — 페이지를 열기 전에 결과가 나와도, 11/14)마다
  *      같은 사건의 관심물건이 있으면 → 그 매각기일 일정이 없을 때 넣고, 상태 관심·입찰 예정 → 입찰 완료, 입찰가가 비었으면 채운다.
  *      없으면 → 빌라 페이지 ☆ 관심과 같은 이름(c연도-번호)으로 새로 담는다(빌라 카드에도 ★ 로 보인다).
  *  · 한 번 담은 입찰은 notes/bid-items 에 적어 둔다 — 사람이 캘린더에서 지운 물건은 다시 살리지 않는다.
@@ -19,6 +19,7 @@
   const WAIT = new Set(['', '대기']);
   const OPEN = new Set(['관심', '입찰 예정', '입찰 완료']);
   const LOOKBACK = 3;                   // 결과가 늦게 올라와도(bid_watch 와 같은 사흘) 담는다
+  const WIN_BACK = 120;                 // 낙찰은 넉 달 안이면 담는다(대금·명도 일정을 캘린더에서 봐야 해서)
   const won = n => Math.round(Number(n) || 0).toLocaleString('ko-KR') + '원';
   let running = null;
 
@@ -33,28 +34,28 @@
       const nd = await db.doc('notes/bid-items').get();
       const seen = new Set(((nd.exists && nd.data()) || {}).keys || []);
       const find = k => items.find(it => ck(it.caseNo) === k || it.id === k);
-      const now = new Date().toISOString(), cut = daysAgo(LOOKBACK);
+      const now = new Date().toISOString(), cut = daysAgo(LOOKBACK), winCut = daysAgo(WIN_BACK);
       let n = 0, seenAdd = false;
       for (const b of bids) {
-        const k = ck(b.case);
-        if (!k || !isDay(b.date) || !WAIT.has(b.result || '') || b.date < cut) continue;
+        const k = ck(b.case), isWin = b.result === '낙찰';
+        if (!k || !isDay(b.date) || !(WAIT.has(b.result || '') || isWin) || b.date < (isWin ? winCut : cut)) continue;
         const key = k + '@' + b.date, it = find(k);
         if (it) {
           const body = Object.assign({}, it); delete body.id;
           const evs = (it.events || []).slice();
           let ch = false;
           if (!evs.some(e => e.kind === '매각기일' && e.date === b.date)) {
-            evs.push({ id: 'b' + b.date.replace(/-/g, ''), date: b.date, time: '10:00', kind: '매각기일', note: '📝 우리 입찰 ' + won(b.bid) }); ch = true;
+            evs.push({ id: 'b' + b.date.replace(/-/g, ''), date: b.date, time: '10:00', kind: '매각기일', note: (isWin ? '🎉 낙찰 ' : '📝 우리 입찰 ') + won(b.bid) }); ch = true;
           }
-          if (OPEN.has(it.status || '관심') && it.status !== '입찰 완료') { body.status = '입찰 완료'; ch = true; }
+          if (!isWin && OPEN.has(it.status || '관심') && it.status !== '입찰 완료') { body.status = '입찰 완료'; ch = true; }   // 낙찰은 아래 결과 따라가기가
           if (!it.bid && b.bid) { body.bid = b.bid; body.who = b.who || it.who || '서영'; ch = true; }
           if (ch) { body.events = evs; body.updatedAt = now; await db.collection('items').doc(it.id).set(body); items.splice(items.indexOf(it), 1, Object.assign({ id: it.id }, body)); n++; }
           if (!seen.has(key)) { seen.add(key); seenAdd = true; }
         } else if (!seen.has(key)) {
           const body = { caseNo: b.case, court: b.court || '', title: b.title || '', appraisal: b.appraisal || 0, minPrice: b.min || 0,
-            status: '입찰 완료', bid: b.bid || 0, who: b.who || '서영', url: '',
+            status: isWin ? '낙찰' : '입찰 완료', bid: b.bid || 0, who: b.who || '서영', url: '',
             memo: '📝 입찰기록에서 자동으로 담았어요 · 우리 입찰가 ' + won(b.bid) + (b.note ? '\n' + b.note : ''),
-            events: [{ id: 'b' + b.date.replace(/-/g, ''), date: b.date, time: '10:00', kind: '매각기일', note: '📝 우리 입찰 ' + won(b.bid) }],
+            events: [{ id: 'b' + b.date.replace(/-/g, ''), date: b.date, time: '10:00', kind: '매각기일', note: (isWin ? '🎉 낙찰 ' : '📝 우리 입찰 ') + won(b.bid) }],
             updatedAt: now, from: '입찰기록' };
           await db.collection('items').doc(k).set(body); items.push(Object.assign({ id: k }, body)); n++;
           seen.add(key); seenAdd = true;
