@@ -143,13 +143,9 @@ button{font:inherit;color:inherit}
 .vtab{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:8px 15px;font-size:14px;font-weight:800;color:var(--t2);cursor:pointer;white-space:nowrap}
 .vtab.on{background:var(--ink);border-color:var(--ink);color:#fff}
 @media(max-width:420px){.vtabs{gap:6px}.vtab{padding:8px 10px;font-size:13px}}
-.dl .top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
-.dl .vd{font-weight:800;font-size:14px}
-.dl .nm{font-weight:800;font-size:15px;margin-top:4px}
-.dl .pr{font-size:18px;font-weight:800;margin-top:6px}
-.dl .m{font-size:12.5px;color:var(--t2);line-height:1.6;word-break:keep-all}
+/* 🏷 매물(11/14) — 내 집 후보와 같은 줄 목록 · 판단 줄만 굵게 */
+.dl .vd{font-weight:800;color:var(--t1)}
 .dl a.nv{text-decoration:none}
-@media(min-width:761px){.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.dgrid .card{margin:0}}
 /* ❓ 사용법 창(11/3) — 폰은 아래에서 올라오는 판, PC 는 가운데 */
 .vtabs .hlp{margin-left:auto;border:1.5px solid var(--line);background:#fff;border-radius:999px;width:38px;height:38px;font-size:16px;cursor:pointer;flex:0 0 auto}
 .hmodal{position:fixed;inset:0;z-index:3000;background:rgba(20,25,35,.45);display:flex;align-items:flex-end;justify-content:center}
@@ -873,8 +869,13 @@ const HELP=[
     '🚏 내려서 집까지 = 그 길의 역·정류장에서 티맵 실제 걷는 길로 잰 시간이에요.',
     '🚇 갈아타기 0번 = 갈아타지 않고 가는 길이 있는 단지만 남겨요.',
     '⭐ 관심 단지는 목록과 지도 ⭐로 보여요.',
-    '매일 09:30 개인 채팅: 후보 단지 경매 알림, 관심 단지 새 실거래 알림.',
-    '🏷 매물 = 폰 알림으로 받은 네이버 새 매물을 실거래보다 싼 순으로 보여 줘요(열쇠 있는 기기만).']],
+    '매일 09:30 개인 채팅: 후보 단지 경매 알림, 관심 단지 새 실거래 알림.']],
+  ['🏷 매물',['폰 알림으로 받은 네이버 새 매물과 직접 추린 매물을 실거래와 견줘요(열쇠 있는 기기만).',
+    '조건 칸 = 판단·평형·호가·지역·올라온 때·🏠 후보 단지만으로 걸러요.',
+    '고른 조건은 우리 구글 시트에 저장돼 폰·PC가 같게 보여요.',
+    '지도 점 = 단지예요.',
+    '점 색 = 그 단지 매물 중 가장 싼 판단(🔥 주황·🟢 초록·⚪ 회색·🔺 빨강)이에요.',
+    '점을 누르면 목록에서 그 매물이 반짝여요.']],
   ['폰에서',['목록은 아래 시트예요.',
     '손잡이를 끌면 접기·반·전체로 붙어요.',
     '손잡이를 톡 누르면 접기 ↔ 반으로 바뀌어요.']]];
@@ -1328,35 +1329,100 @@ function askListHtml(list){ if(!list||!list.length) return '';
 
 // 🏷 매물 판(11/6 사장님 '경매처럼 체리피킹') — 알림 건 단지의 새 매물을 실거래와 견줘 싼 순으로. market_listings.py 가 시트 notes/listings(두 번째 열쇠로만 읽힘)에 올린다.
 //  공개 파일엔 호가가 없다. 판단 기준은 💬 judgeAsk 와 같고, 알림 글에 층이 없어 모든 층으로 본다.
-let DEALF='all', DEALN=200;   // 🏷 판: 처음 200장 · '더 보기'로 이어서(11/9 전부 보이게)
-async function renderDeals(app){ noMap(); app.innerHTML='<div class="empty">불러오는 중…</div>'; await loadCond();
-  const nav=vtabs('deals');
-  if(!CKEY){ app.innerHTML=`<div class="head">${nav}</div><div class="card"><div class="empty">🔑 이 판은 두 번째 열쇠가 있는 기기에서만 보여요.</div></div>`; bindVtabs(app); return; }
-  // 판은 여러 칸(notes/listings 첫 칸에 parts · listings_1 …)에 나눠 담겨 있다(11/9) — 다 모아 그린다
-  let rows=[]; try{ const s=await CDB.doc('notes/listings').get(); const d0=(s.exists&&s.data())||{}; rows=d0.rows||[];
+//  11/14 현승 '매물탭도 필터 걸 수 있게, 양식을 온도계·내 집 후보와 맞춰(지도 있고 탭 위치 같게)'
+//   → 지도 + 목록 시트(두 화면과 같은 틀) · 조건 칸 · 고른 조건은 시트 조건의 deal 칸에 저장(폰·PC 같게, 봇 계산엔 안 씀)
+let DEALN=200, HPOS=null;   // 처음 200줄 · '더 보기'로 이어서(11/9 전부 보이게)
+const DEAL0={f:'all', band:'', max:'', min:'', gu:'', days:'', home:'', sort:'r'};
+const DMARK={'🔥':['#f0602a','급매 후보'], '🟢':['#16a34a','조금 싼 편'], '⚪':['#b0b8c1','보통·판단 어려움'], '🔺':['#e34948','비싼 편']}, DORD=['🔥','🟢','⚪','🔺'];
+const dgrp=b=>b>=55&&b<66?'59':b>=80&&b<86?'84':'';
+const dtm=t=>{ const m=/^\d{4}-(\d\d)-(\d\d)(?:T(\d\d:\d\d))?/.exec(t||''); return m?`${+m[1]}/${+m[2]}${m[3]?' '+m[3]:''}`:''; };
+const dCheap=x=>x.m==='🔥'||x.m==='🟢';
+function dealCond(){ const d=Object.assign({}, DEAL0, (COND&&COND.deal)||{}); for(const k in DEAL0) if(d[k]==null) d[k]=DEAL0[k]; return d; }
+async function loadDeals(){ let rows=[];   // 판은 여러 칸(notes/listings 첫 칸에 parts · listings_1 …)에 나눠 담겨 있다(11/9) — 다 모아 그린다
+  try{ const s=await CDB.doc('notes/listings').get(); const d0=(s.exists&&s.data())||{}; rows=d0.rows||[];
     const more=await Promise.all(Array.from({length:Math.max(0,(d0.parts||1)-1)},(_,i)=>CDB.doc('notes/listings_'+(i+1)).get().then(x=>(x.exists&&x.data().rows)||[]).catch(()=>[])));
     rows=rows.concat(...more); }catch(e){}
-  const cheap=rows.filter(x=>x.m==='🔥'||x.m==='🟢'), mid=rows.filter(x=>x.m==='🔥'||x.m==='🟢'||x.v==='보통 값'),
-    all=DEALF==='cheap'?cheap:DEALF==='mid'?mid:rows, show=all.slice(0,DEALN),
-    tm=t=>{ const m=/^\d{4}-(\d\d)-(\d\d)(?:T(\d\d:\d\d))?/.exec(t||''); return m?`${+m[1]}/${+m[2]}${m[3]?' '+m[3]:''}`:''; };
-  app.innerHTML=`<div class="head">${nav}<div class="sub">${nw('알림·직접 추린 매물')} · ${nw('실거래보다 싼 순')}<br>${nw('최근 60일 '+rows.length+'건 · 싼 편 '+cheap.length+'건')}</div></div>
-    <div class="chips"><button class="chip ${DEALF==='all'?'on':''}" data-df="all">전체</button><button class="chip ${DEALF==='mid'?'on':''}" data-df="mid">⚪ 보통 이하</button><button class="chip ${DEALF==='cheap'?'on':''}" data-df="cheap">🔥🟢 싼 편만</button></div>
-    <div class="dgrid">${show.map(x=>{ const [c,u,j]=String(x.k).split('|'), g=SUM.regions.find(r=>r.c===c)||{n:''};
-      return `<div class="card tap dl" data-dk="${esc(x.k)}" data-db="${x.b||''}"><div class="top"><div class="vd">${esc(x.m||'')} ${esc(x.v||'')}</div><div class="m">${nw(tm(x.t))}</div></div>
-        <div class="nm">${esc(x.n)}${x.d?' '+esc(x.d):''}</div><div class="m">${nw(esc(g.n+' '+u))}${x.ar?' · '+nw('전용 '+x.ar+'㎡'):''} · ${nw(x.f?esc(x.f):'층 모름')}</div>
-        <div class="pr">${man(x.a)}</div>
+  return rows; }
+function dealRows(rows, d){
+  const cut=d.days?new Date(Date.now()-d.days*864e5-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10):'';
+  const hs=d.home&&COND.plans&&COND.plans.length?new Set(homeRows().map(x=>x.r[0]+'|'+x.r[1]+'|'+x.r[2])):null;   // 🏠 = 내 집 후보 탭과 같은 조건
+  const out=rows.map((x,i)=>Object.assign({i},x)).filter(x=>{ const k=String(x.k);
+    if(d.f==='cheap'&&!dCheap(x)) return false;
+    if(d.f==='mid'&&!(dCheap(x)||x.v==='보통 값')) return false;
+    if(d.band&&dgrp(x.b||x.ar||0)!==d.band) return false;
+    if(d.max&&x.a>d.max) return false;
+    if(d.min&&x.a<d.min) return false;
+    if(d.gu&&k.split('|')[0]!==String(d.gu)) return false;
+    if(cut&&String(x.t||'').slice(0,10)<cut) return false;
+    if(hs&&!hs.has(k)) return false;
+    return true; });
+  const f={t:(a,b)=>String(b.t||'').localeCompare(String(a.t||''))||a.i-b.i, a:(a,b)=>a.a-b.a||a.i-b.i}[d.sort]||((a,b)=>a.i-b.i);   // r = 봇 순서(싼 편 먼저 · 실거래보다 싼 순)
+  return out.sort(f); }
+async function renderDeals(app){ app.innerHTML='<div class="empty">불러오는 중…</div>'; await loadHome();
+  const nav=vtabs('deals');
+  if(!CKEY){ noMap(); app.innerHTML=`<div class="head">${nav}</div><div class="card"><div class="empty">🔑 이 판은 두 번째 열쇠가 있는 기기에서만 보여요.</div></div>`; bindVtabs(app); return; }
+  const rows=await loadDeals(), d=dealCond(), all=dealRows(rows, d), show=all.slice(0,DEALN), HOK=!!(COND.plans&&COND.plans.length);
+  const opt=(v,list)=>list.map(([x,t])=>`<option value="${x}"${String(v)===String(x)?' selected':''}>${t}</option>`).join('');
+  const gus={}; rows.forEach(x=>{ const c=String(x.k).split('|')[0]; gus[c]=(gus[c]||0)+1; });
+  if(d.gu&&!gus[d.gu]) gus[d.gu]=0;                                    // 고른 구에 매물이 다 빠져도 칸에서 사라지지 않게
+  const gname=c=>(SUM.regions.find(r=>r.c===c)||{n:c}).n;
+  app.innerHTML=`<div class="head">${nav}<div class="sub">${nw('알림·직접 추린 매물')} · ${nw('실거래와 견줌')}<br>${nw('최근 60일 '+rows.length+'건 · 싼 편 '+rows.filter(dCheap).length+'건')}</div></div>
+    <div class="card"><div class="cond">
+      <label>판단<select data-dc="f">${opt(d.f,[['all','전체'],['mid','⚪ 보통 이하'],['cheap','🔥🟢 싼 편만']])}</select></label>
+      <label>평형<select data-dc="band">${opt(d.band,[['','전체'],['59','59㎡대'],['84','84㎡대']])}</select></label>
+      <label>호가 상한<select data-dc="max">${opt(d.max,[...[50000,60000,80000,100000,120000,150000,180000,200000].map(v=>[v,man(v)+' 이하']),['','제한 없음']])}</select></label>
+      <label>호가 하한<select data-dc="min">${opt(d.min,[...[40000,50000,60000,70000,80000,90000,100000,120000].map(v=>[v,man(v)+' 이상']),['','제한 없음']])}</select></label>
+      <label>지역<select data-dc="gu">${opt(d.gu,[['','전체'],...Object.entries(gus).sort((a,b)=>b[1]-a[1]).map(([c,n])=>[c,esc(gname(c))+' '+n+'건'])])}</select></label>
+      <label>올라온 때<select data-dc="days">${opt(d.days,[[3,'3일 안'],[7,'7일 안'],[14,'14일 안'],[30,'30일 안'],['','60일 전부']])}</select></label>
+      ${HOK?`<label>🏠 내 집 후보<select data-dc="home">${opt(d.home,[['','상관없음'],[1,'후보 단지만']])}</select></label>`:''}
+    </div><div class="saved" id="csaved"></div></div>
+    <div class="lab">조건에 맞는 매물 ${all.length.toLocaleString()}건 · 싼 편 ${all.filter(dCheap).length.toLocaleString()}건</div>
+    <div class="chips">${[['r','실거래보다 싼 순'],['t','새로 올라온 순'],['a','호가 낮은 순']].map(([k,t])=>`<button class="chip ${d.sort===k?'on':''}" data-dsort="${k}">${t}</button>`).join('')}</div>
+    <div class="card">${show.map(x=>{ const [c,u]=String(x.k).split('|');
+      return `<div class="row dl" data-dk="${esc(x.k)}" data-db="${x.b||''}"><div class="a"><div class="n nm">${esc(x.n)}${x.d?' '+esc(x.d):''}</div>
+        <div class="m vd">${esc(x.m||'')} ${esc(x.v||'')}</div>
+        <div class="m">${nw(esc(gname(c)+' '+u))}${x.ar?' · '+nw('전용 '+x.ar+'㎡'):''} · ${nw(x.f?esc(x.f):'층 모름')} · ${nw(dtm(x.t))}</div>
         ${x.ref?`<div class="m">${nw(esc(x.w||'최근')+' 중위 '+man(x.ref)+'('+x.rn+'건)보다 ')}${pctH(x.r)}</div>`:''}
         ${x.y!=null?`<div class="m">${nw('1년 '+x.y+'건 중 '+x.c+'건이 이보다 쌌어요')}</div>`:''}
         ${x.kw?`<div class="m">${nw('🏷 '+esc(x.kw))}</div>`:''}
-        <a class="nv" target="_blank" rel="noopener" href="${x.ai?'https://fin.land.naver.com/articles/'+encodeURIComponent(x.ai):'https://m.land.naver.com/search/result/'+encodeURIComponent(g.n+' '+u+' '+x.n)}">${x.ai?'네이버 이 매물 →':'네이버 매물 →'}</a></div>`; }).join('')
-      ||`<div class="card"><div class="empty">${rows.length?'지금은 싼 편으로 나온 매물이 없어요.':'아직 받은 매물이 없어요.<br>폰 알림 전달을 마치면 여기에 쌓여요.'}</div></div>`}</div>
-    ${all.length>show.length?`<div class="chips"><button class="chip" data-dmore>더 보기 · ${nw((all.length-show.length).toLocaleString()+'건 남음')}</button></div>`:''}
-    <div class="foot">· 네이버 전체가 아니라 알림을 건 단지의 새 매물과 직접 추려 넣은 매물만 보여요.<br>· 호가를 직거래 뺀 최근 실거래 중위와 견줬어요.<br>· 층과 상관없이 같은 면적 모든 층의 거래와 견줘요.<br>· 저층이면 싸게, 고층이면 비싸게 보이지 않는지 확인이 필요해요.<br>· 싼 데는 이유가 있을 수 있어요(수리 상태·세입자·입주일).<br>· 호가는 우리 시트에만 있고 공개 파일엔 없어요.</div>`;
+        <a class="nv" target="_blank" rel="noopener" href="${x.ai?'https://fin.land.naver.com/articles/'+encodeURIComponent(x.ai):'https://m.land.naver.com/search/result/'+encodeURIComponent(gname(c)+' '+u+' '+x.n)}">${x.ai?'네이버 이 매물 →':'네이버 매물 →'}</a></div>
+        <div class="b"><div class="p">${nw(man(x.a))}</div>${x.r!=null?`<div class="m">${pctH(x.r,0)}</div>`:''}</div></div>`; }).join('')
+      ||`<div class="empty">${rows.length?'조건에 맞는 매물이 없어요.<br>조건을 넓혀 보세요.':'아직 받은 매물이 없어요.<br>폰 알림 전달을 마치면 여기에 쌓여요.'}</div>`}
+      ${all.length>show.length?`<button class="more" data-dmore>더 보기 · ${nw((all.length-show.length).toLocaleString()+'건 남음')}</button>`:''}</div>
+    <div class="foot">· 네이버 전체가 아니라 알림을 건 단지의 새 매물과 직접 추려 넣은 매물만 보여요.<br>· 호가를 직거래 뺀 최근 실거래 중위와 견줬어요.<br>· 층과 상관없이 같은 면적 모든 층의 거래와 견줘요.<br>· 저층이면 싸게, 고층이면 비싸게 보이지 않는지 확인이 필요해요.<br>· 싼 데는 이유가 있을 수 있어요(수리 상태·세입자·입주일).<br>· 고른 조건은 우리 구글 시트에 저장돼 폰·PC가 같게 보여요.${HOK?'<br>· 🏠 후보 단지만 = 내 집 후보 탭 조건(예산·근무지 등)에 드는 단지예요.':''}<br>· 지도 점 = 단지예요(색 = 그 단지 매물 중 가장 싼 판단).<br>· 호가는 우리 시트에만 있고 공개 파일엔 없어요.</div>`;
   bindVtabs(app);
-  app.querySelectorAll('[data-df]').forEach(b=>b.onclick=()=>{ DEALF=b.dataset.df; DEALN=200; render(); });
-  app.querySelectorAll('[data-dmore]').forEach(b=>b.onclick=()=>{ DEALN+=300; const y=scrollY; render().then(()=>scrollTo(0,y)); });
+  const put=(k,v)=>{ COND.deal=Object.assign({}, COND.deal||{}, {[k]:v}); DEALN=200; saveCond('✓ 매물 조건 저장됨(우리 구글 시트)'); render(); };
+  app.querySelectorAll('[data-dc]').forEach(sel=>sel.onchange=()=>{ const v=sel.value; put(sel.dataset.dc, v===''?null:(isNaN(+v)?v:+v)); });
+  app.querySelectorAll('[data-dsort]').forEach(b=>b.onclick=()=>put('sort', b.dataset.dsort));
+  app.querySelectorAll('[data-dmore]').forEach(b=>b.onclick=()=>{ DEALN+=300; const sh=document.getElementById('msheet'), y=scrollY, sy=sh?sh.scrollTop:0;
+    render().then(()=>{ scrollTo(0,y); if(sh) sh.scrollTop=sy; }); });
   app.querySelectorAll('.dl a').forEach(a=>a.onclick=e=>e.stopPropagation());
-  app.querySelectorAll('[data-dk]').forEach(el=>el.onclick=()=>{ const [c,u,j]=el.dataset.dk.split('|'); go({v:null, r:c, d:u, x:j, a:el.dataset.db||null}); }); }
+  app.querySelectorAll('[data-dk]').forEach(el=>el.onclick=()=>{ const [c,u,j]=el.dataset.dk.split('|'); go({v:null, r:c, d:u, x:j, a:el.dataset.db||null}); });
+  setLbl(`🏷 매물 <span>${all.length.toLocaleString()}건 · 싼 편 ${all.filter(dCheap).length.toLocaleString()}건</span>`); dealMap(all, d); }
+// 🏷 지도 — 단지마다 점 하나(색 = 그 단지 매물 중 가장 싼 판단) · 🏠 후보 단지만이면 근무지·반경도
+function dealMap(rows, d){
+  if(!HPOS) HPOS=new Map(HOMES.rows.map(r=>[r[0]+'|'+r[1]+'|'+r[2], r]));
+  const by=new Map(); let miss=0;
+  for(const x of rows){ const k=String(x.k); if(!HPOS.has(k)){ miss++; continue; } if(!by.has(k)) by.set(k,[]); by.get(k).push(x); }
+  const plan=d.home&&COND.plans&&COND.plans.length?COND.plans[COND.plan||0]:null;
+  return mapView('deals|'+['f','band','max','min','gu','days','home'].map(k=>d[k]).join('|'), (L,lay)=>{ const pts=[];
+    for(const [k,xs] of by){ const r=HPOS.get(k), ll=[r[5],r[4]]; pts.push(ll);
+      const best=xs.slice().sort((a,b)=>DORD.indexOf(a.m)-DORD.indexOf(b.m)||(a.r??9)-(b.r??9))[0], col=(DMARK[best.m]||DMARK['⚪'])[0];
+      const gn=(SUM.regions.find(g=>g.c===r[0])||{}).n||'';
+      const html=`<div class="hpop"><b>${esc(r[3])}</b><br>${esc(gn+' '+r[1])} · 매물 ${xs.length}건`
+        +xs.slice(0,4).map(x=>`<br>${esc(x.m||'')} ${x.d?esc(x.d)+' ':''}${x.ar?x.ar+'㎡ ':''}<b>${man(x.a)}</b>${x.r!=null?' '+pct(x.r,0):''}`).join('')
+        +(xs.length>4?`<br>… ${xs.length-4}건 더`:'')
+        +`<br><a href="#" class="go" data-go="${r[0]}|${esc(r[1])}|${esc(r[2])}|${best.b||''}">단지 보기 →</a> <a href="#" class="go" data-nm="${NMAP(gn+' '+r[1]+' '+r[3])}">네이버 지도 →</a></div>`;
+      L.circleMarker(ll,{radius:xs.length>2?8:6.5, color:'#fff', weight:1.5, fillColor:col, fillOpacity:.92}).bindPopup(html)
+        .on('click',()=>focusRow(`.dl[data-dk="${k}"]`)).addTo(lay); }
+    if(plan){ const pins=[]; for(const p of (plan.pts||[])){ pts.push([p.lat,p.lng]);
+      const near=pins.some(q=>km([q.lng,q.lat],[p.lng,p.lat])<3); pins.push(p);
+      L.circle([p.lat,p.lng],{radius:(plan.km||10)*1000, color:'#191f28', weight:1.2, dashArray:'5 5', fill:false, interactive:false}).addTo(lay);
+      L.marker([p.lat,p.lng],{icon:L.divIcon({className:'', html:`<span class="hpin">🏢 ${esc(p.n)}</span>`, iconSize:null, iconAnchor:near?[14,-8]:[14,12]}), zIndexOffset:1000}).addTo(lay); } }
+    return pts; },
+    by.size?DORD.map(m=>`<i style="background:${DMARK[m][0]}"></i>${DMARK[m][1]}`).join('')+`<br>점 = 단지 ${by.size.toLocaleString()}곳${miss?' · 지도에 없는 매물 '+miss+'건':''}`
+      :(rows.length?'지도에 찍을 단지가 없어요':'조건에 맞는 매물이 없어요'));
+}
 
 // 🔨 지금 경매 중(11/3) — 경매 사이트 목록(매일 아침)에서 이 단지와 구·동·지번이 같은 물건. 최저가를 최근 실거래 기준(💬 와 같은 셈)과 견줌
 // 📊 지난 낙찰이 시세보다 얼마나 쌌나(11/4) — market_auction.sale_stats. 지역 낙찰이 적으면 수도권 전체. 숫자 근거는 인계 8장
